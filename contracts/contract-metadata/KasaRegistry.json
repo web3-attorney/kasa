@@ -1,0 +1,196 @@
+{
+  "contractAddress": "0x6a86b61cb3205b8d017186b8ecc9629641c6dd21",
+  "network": "ARC-TESTNET",
+  "deployerWalletId": "3c2464b2-8369-52e2-a782-800bbeca5396",
+  "contract_code_path": "/home/user/app/contracts/KasaRegistry.sol",
+  "contract_compiled_code_path": "/home/user/app/contracts/out/KasaRegistry.sol/KasaRegistry.json",
+  "contract_network_and_links": {
+    "Arc Testnet": "https://explorer.testnet.arc.io/address/0x6a86b61cb3205b8d017186b8ecc9629641c6dd21"
+  },
+  "contract_deployments": [
+    {
+      "chain": "Arc Testnet",
+      "address": "0x6a86b61cb3205b8d017186b8ecc9629641c6dd21",
+      "explorerUrl": "https://explorer.testnet.arc.io/address/0x6a86b61cb3205b8d017186b8ecc9629641c6dd21",
+      "txHash": "0x023ce1235e2feb19afaf9e9fc7f5cc5f92b06b5f37c227164a40c6b972f07b33",
+      "deployedAt": "2026-10-28T20:22:04.747Z"
+    }
+  ],
+  "abi": [
+    {
+      "type": "function",
+      "name": "commit",
+      "inputs": [
+        {
+          "name": "commitment",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "commitBlocks",
+      "inputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "commitments",
+      "inputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "hasUsername",
+      "inputs": [
+        {
+          "name": "wallet",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool",
+          "internalType": "bool"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "register",
+      "inputs": [
+        {
+          "name": "username",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "salt",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "resolve",
+      "inputs": [
+        {
+          "name": "username",
+          "type": "string",
+          "internalType": "string"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "reverseResolve",
+      "inputs": [
+        {
+          "name": "wallet",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "string",
+          "internalType": "string"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "event",
+      "name": "UsernameRegistered",
+      "inputs": [
+        {
+          "name": "wallet",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "username",
+          "type": "string",
+          "indexed": false,
+          "internalType": "string"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "error",
+      "name": "AlreadyRegistered",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "CommitTooRecent",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidCommitment",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidUsername",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NoCommitment",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "UsernameTaken",
+      "inputs": []
+    }
+  ]
+}
