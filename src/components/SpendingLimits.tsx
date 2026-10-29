@@ -12,13 +12,13 @@ interface Props { walletId?: string }
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '11px 14px', borderRadius: '12px',
-  background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)',
-  color: '#fff', fontSize: '14px', outline: 'none', fontFamily: 'Geist, sans-serif',
+  background: 'var(--surface-muted)', border: '1px solid var(--border)',
+  color: 'var(--t1)', fontSize: '14px', outline: 'none', fontFamily: 'Geist, sans-serif',
   boxSizing: 'border-box',
 }
 const labelStyle: React.CSSProperties = {
   fontSize: '11px', fontWeight: 600, letterSpacing: '.06em',
-  textTransform: 'uppercase', color: 'rgba(255,255,255,.4)', marginBottom: '5px', display: 'block',
+  textTransform: 'uppercase', color: 'var(--t3)', marginBottom: '5px', display: 'block',
 }
 
 export default function SpendingLimits({ walletId }: Props) {
@@ -56,7 +56,7 @@ export default function SpendingLimits({ walletId }: Props) {
 
   const card: React.CSSProperties = {
     padding: '16px', borderRadius: '16px',
-    background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)',
+    background: 'var(--surface-muted)', border: '1px solid var(--border)',
   }
 
   const hasLimit   = (data?.dailyLimitUsdc ?? 0) > 0
@@ -70,9 +70,9 @@ export default function SpendingLimits({ walletId }: Props) {
       <div style={{ ...card, background: hasLimit ? 'rgba(34,197,94,.06)' : 'rgba(255,255,255,.04)', border: hasLimit ? '1px solid rgba(34,197,94,.18)' : '1px solid rgba(255,255,255,.08)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
           {hasLimit
-            ? <ShieldCheck style={{ width: '16px', height: '16px', color: '#22c55e' }} />
-            : <Shield style={{ width: '16px', height: '16px', color: 'rgba(255,255,255,.3)' }} />}
-          <span style={{ fontSize: '14px', fontWeight: 600, color: '#fff' }}>
+            ? <ShieldCheck style={{ width: '16px', height: '16px', color: 'var(--success)' }} />
+            : <Shield style={{ width: '16px', height: '16px', color: 'var(--t3)' }} />}
+          <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--t1)' }}>
             {hasLimit ? 'Daily limit active' : 'No spending limit'}
           </span>
         </div>
@@ -80,17 +80,17 @@ export default function SpendingLimits({ walletId }: Props) {
         {hasLimit && data && (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px' }}>
-              <span style={{ color: 'rgba(255,255,255,.45)' }}>Spent today</span>
-              <span style={{ color: '#fff', fontWeight: 600, fontFamily: 'monospace' }}>
+              <span style={{ color: 'var(--t2)' }}>Spent today</span>
+              <span style={{ color: 'var(--t1)', fontWeight: 600, fontFamily: 'monospace' }}>
                 ${data.spentToday.toFixed(2)} / ${data.dailyLimitUsdc.toFixed(2)}
               </span>
             </div>
             {/* Progress bar */}
-            <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,.1)', overflow: 'hidden', marginBottom: '8px' }}>
+            <div style={{ height: '6px', borderRadius: '3px', background: 'var(--surface)', overflow: 'hidden', marginBottom: '8px' }}>
               <div style={{ height: '100%', borderRadius: '3px', width: `${pctUsed}%`, transition: 'width .4s',
                 background: pctUsed > 80 ? '#ef4444' : pctUsed > 50 ? '#f59e0b' : '#22c55e' }} />
             </div>
-            <p style={{ margin: 0, fontSize: '11px', color: 'rgba(255,255,255,.3)' }}>
+            <p style={{ margin: 0, fontSize: '11px', color: 'var(--t3)' }}>
               Resets at {resetTime} · Sends above limit require email confirmation
             </p>
           </>
@@ -113,7 +113,7 @@ export default function SpendingLimits({ walletId }: Props) {
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button onClick={() => setEditing(false)}
-              style={{ flex: 1, height: '40px', borderRadius: '12px', background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)', color: 'rgba(255,255,255,.6)', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
+              style={{ flex: 1, height: '40px', borderRadius: '12px', background: 'var(--surface-muted)', border: '1px solid var(--border)', color: 'var(--t2)', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
               Cancel
             </button>
             <button onClick={() => void handleSave()} disabled={saving}
@@ -129,8 +129,8 @@ export default function SpendingLimits({ walletId }: Props) {
         </div>
       ) : (
         <button onClick={() => { setEditing(true); setNewLimit(String(data?.dailyLimitUsdc ?? '')) }}
-          style={{ width: '100%', height: '44px', borderRadius: '14px', border: '1px solid rgba(255,255,255,.12)',
-            background: 'rgba(255,255,255,.04)', color: 'rgba(255,255,255,.6)', fontWeight: 600, fontSize: '13px', cursor: 'pointer',
+          style={{ width: '100%', height: '44px', borderRadius: '14px', border: '1px solid var(--border)',
+            background: 'var(--surface-muted)', color: 'var(--t2)', fontWeight: 600, fontSize: '13px', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
           <Shield style={{ width: '14px', height: '14px' }} />
           {hasLimit ? 'Change limit' : 'Set daily limit'}
@@ -138,7 +138,7 @@ export default function SpendingLimits({ walletId }: Props) {
       )}
 
       {/* Info */}
-      <div style={{ padding: '12px 14px', borderRadius: '14px', background: 'rgba(255,255,255,.02)', border: '1px solid rgba(255,255,255,.05)', fontSize: '12px', color: 'rgba(255,255,255,.3)', lineHeight: 1.6 }}>
+      <div style={{ padding: '12px 14px', borderRadius: '14px', background: 'rgba(255,255,255,.02)', border: '1px solid rgba(255,255,255,.05)', fontSize: '12px', color: 'var(--t3)', lineHeight: 1.6 }}>
         When a send exceeds your daily limit, Kasa emails you a 6-digit code. Enter it to approve the transaction. Limits reset every 24 hours.
       </div>
     </div>

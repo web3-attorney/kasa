@@ -172,28 +172,39 @@ const schedules = new Map<string, Schedule>()
 interface PayLink { id: string; toWalletId: string; toAddress: string; toUsername: string; amount: string; memo: string; createdAt: number; paidTxHash: string|null }
 const payLinks = new Map<string, PayLink>()
 
-interface AutoSavePlan { walletId: string; walletAddress: string; savingsPercent: number; lastCheckedBlock: bigint; active: boolean; inFlight: boolean }
+interface AutoSavePlan { walletId: string; walletAddress: string; savingsPercent: number; lastCheckedBlock: bigint; active: boolean; inFlight: boolean; endTime?: number; userDeactivated: boolean }
 const autoSavePlans = new Map<string, AutoSavePlan>()
 
-function upsertAutoSavePlan(wId: string, addr: string, percent: number) {
-  // Always reset lastCheckedBlock to 0 so next poll scans back 200 blocks
-  autoSavePlans.set(wId, { walletId: wId, walletAddress: addr.toLowerCase(), savingsPercent: percent, lastCheckedBlock: 0n, active: percent > 0, inFlight: false })
-  console.log(`[auto-save] upserted wallet=${addr} percent=${percent} active=${percent > 0}`)
+function upsertAutoSavePlan(wId: string, addr: string, percent: number, deactivated = false) {
+  const existing = autoSavePlans.get(wId)
+  autoSavePlans.set(wId, {
+    walletId: wId,
+    walletAddress: addr.toLowerCase(),
+    savingsPercent: percent,
+    lastCheckedBlock: 0n,
+    active: percent > 0 && !deactivated,
+    inFlight: existing?.inFlight ?? false,
+    endTime: deactivated ? 0 : (existing?.endTime ?? 0),
+    userDeactivated: deactivated,
+  })
+  console.log(`[auto-save] upserted wallet=${addr} percent=${percent} active=${percent > 0 && !deactivated}${deactivated ? ' (user-deactivated)' : ''}`)
 }
 
 // ── On-chain plan reader ───────────────────────────────────────────────────────
-async function getOnchainPlan(addr: string): Promise<{ percent: number; active: boolean }> {
+async function getOnchainPlan(addr: string): Promise<{ percent: number; active: boolean; endTime: number }> {
   try {
     const sel = '0x7cb22aaf' // keccak256("getPlan(address)")[0:4]
     const data = sel + addr.toLowerCase().replace('0x', '').padStart(64, '0')
     const res = await rpcCall<string>('eth_call', [{ to: KASA_SAVINGS_ADDR, data }, 'latest'])
-    if (!res || res === '0x') return { percent: 0, active: false }
+    if (!res || res === '0x') return { percent: 0, active: false, endTime: 0 }
     const hex = res.startsWith('0x') ? res.slice(2) : res
-    if (hex.length < 6 * 64) return { percent: 0, active: false }
-    const percent = parseInt(hex.slice(0, 64), 16)
+    if (hex.length < 6 * 64) return { percent: 0, active: false, endTime: 0 }
+    const percent  = parseInt(hex.slice(0 * 64, 1 * 64), 16)
+    // slot 2 = startTime (uint64), slot 3 = endTime (uint64)
+    const endTime  = parseInt(hex.slice(3 * 64, 4 * 64), 16) // unix seconds
     const activeVal = parseInt(hex.slice(5 * 64, 6 * 64), 16)
-    return { percent, active: activeVal === 1 }
-  } catch { return { percent: 0, active: false } }
+    return { percent, active: activeVal === 1, endTime }
+  } catch { return { percent: 0, active: false, endTime: 0 } }
 }
 
 // ── Auto-save sync: discover active plans from chain every 60s ────────────────
@@ -205,9 +216,16 @@ async function syncPlansFromChain() {
     let active = 0
     for (const w of wallets) {
       if (!w.address || !w.id) continue
+      // Skip wallets the user explicitly deactivated — don't re-enable from chain
+      const existing = autoSavePlans.get(w.id)
+      if (existing?.userDeactivated) continue
       const plan = await getOnchainPlan(w.address)
       upsertAutoSavePlan(w.id, w.address, plan.active ? plan.percent : 0)
-      if (plan.active) active++
+      if (plan.active) {
+        const p = autoSavePlans.get(w.id)
+        if (p) p.endTime = plan.endTime
+        active++
+      }
     }
     console.log(`[auto-save sync] ${wallets.length} wallets, ${active} active plans`)
   } catch (e) { console.error('[auto-save sync error]', e) }
@@ -223,9 +241,80 @@ async function getErc20Balance(addr: string): Promise<bigint> {
   return BigInt(res ?? '0x0')
 }
 
+async function getOnchainBalance(addr: string): Promise<bigint> {
+  // Read plan.balance directly from contract (slot 4 of getPlan return)
+  try {
+    const sel = '0x7cb22aaf'
+    const data = sel + addr.toLowerCase().replace('0x', '').padStart(64, '0')
+    const res = await rpcCall<string>('eth_call', [{ to: KASA_SAVINGS_ADDR, data }, 'latest'])
+    if (!res || res === '0x') return 0n
+    const hex = res.startsWith('0x') ? res.slice(2) : res
+    if (hex.length < 6 * 64) return 0n
+    return BigInt('0x' + hex.slice(4 * 64, 5 * 64))
+  } catch { return 0n }
+}
+
+async function doAutoWithdraw(plan: AutoSavePlan, reason: string) {
+  if (plan.inFlight) return
+  // Check onchain balance before calling withdraw — contract reverts on ZeroBalance
+  const onchainBal = await getOnchainBalance(plan.walletAddress)
+  if (onchainBal === 0n) {
+    console.log(`[auto-save] skipping auto-withdraw for ${plan.walletAddress} — zero balance`)
+    plan.active = false
+    plan.userDeactivated = true
+    plan.endTime = 0
+    lastKnownBalance.delete(plan.walletAddress)
+    pushSse(plan.walletId, { type: 'autosave-reset', reason: 'Plan expired — set a new plan to continue saving' })
+    return
+  }
+  plan.inFlight = true
+  try {
+    const sdk = getCircleClient()
+    const wdRes = await sdk.createContractExecutionTransaction({
+      walletId: plan.walletId,
+      contractAddress: KASA_SAVINGS_ADDR,
+      abiFunctionSignature: 'withdraw()',
+      abiParameters: [],
+      fee: { type: 'level', config: { feeLevel: 'MEDIUM' } },
+    })
+    const txId = wdRes.data?.id
+    let txHash = ''
+    if (txId) {
+      for (let i = 0; i < 20; i++) {
+        await new Promise(r => setTimeout(r, 2000))
+        const c = await sdk.getTransaction({ id: txId })
+        const state = c.data?.transaction?.state
+        if (state === 'COMPLETE') { txHash = c.data.transaction.txHash ?? ''; break }
+        if (['FAILED','DENIED','CANCELLED'].includes(state ?? '')) break
+      }
+    }
+    if (txHash) {
+      recordTx(plan.walletId, { txHash, direction: 'out', amount: '0', counterparty: plan.walletAddress, memo: reason, timestamp: Date.now(), label: 'Auto-Withdraw' })
+      console.log(`[auto-save] ${reason} withdrawn tx=${txHash}`)
+    }
+    // Deactivate plan — mark userDeactivated so syncPlansFromChain doesn't re-enable
+    plan.active = false
+    plan.userDeactivated = true
+    plan.endTime = 0
+    lastKnownBalance.delete(plan.walletAddress)
+    // Push SSE reset event to all listeners for this wallet
+    pushSse(plan.walletId, { type: 'autosave-reset', reason })
+  } catch (e) {
+    console.error('[auto-save withdraw error]', e)
+  }
+  plan.inFlight = false
+}
+
 async function pollAutoSave() {
+  const nowSec = Math.floor(Date.now() / 1000)
   for (const plan of autoSavePlans.values()) {
     if (!plan.active) continue
+    // ── Maturity check: auto-withdraw when duration expires ──────────────────
+    if (plan.endTime && plan.endTime > 0 && nowSec >= plan.endTime) {
+      console.log(`[auto-save] plan matured for ${plan.walletAddress}, auto-withdrawing`)
+      await doAutoWithdraw(plan, 'Plan matured — savings auto-withdrawn')
+      continue
+    }
     try {
       // Use balance-delta detection: works for both ERC-20 transfers AND native drips
       const currentBalance = await getErc20Balance(plan.walletAddress)
@@ -261,7 +350,7 @@ async function pollAutoSave() {
       }
       const depRes = await sdk.createContractExecutionTransaction({ walletId: plan.walletId, contractAddress: KASA_SAVINGS_ADDR, abiFunctionSignature: 'deposit(address,uint256)', abiParameters: [plan.walletAddress, saveRaw.toString()], fee: { type: 'level', config: { feeLevel: 'MEDIUM' } } })
       const txId = depRes.data?.id
-      if (!txId) continue
+      if (!txId) { plan.inFlight = false; continue }
       let txHash = ''
       for (let i = 0; i < 20; i++) {
         await new Promise(r => setTimeout(r, 2000))
@@ -557,7 +646,8 @@ app.post('/api/wallet/contract-call', async (req, res) => {
 app.post('/api/autosave/register', (req, res) => {
   const { walletId, address, percent } = req.body as { walletId?: string; address?: string; percent?: number }
   if (!walletId || !address || percent === undefined) { res.status(400).json({ error: 'walletId, address, percent required' }); return }
-  upsertAutoSavePlan(walletId, address, percent)
+  // percent=0 means user explicitly withdrew — mark deactivated so sync won't re-enable
+  upsertAutoSavePlan(walletId, address, percent, percent === 0)
   res.json({ ok: true })
 })
 
@@ -689,5 +779,18 @@ app.get('/api/notifications/stream', (req, _res, next) => {
   })
 })
 
-const PORT = process.env.API_PORT ? parseInt(process.env.API_PORT) : 3001
-app.listen(PORT, () => console.log(`[kasa-server] :${PORT}`))
+// ── Serve built frontend in production ────────────────────────────────────────
+const distDir = path.join(__dirname, '..', 'dist')
+if (fs.existsSync(distDir)) {
+  app.use(express.static(distDir))
+  // SPA fallback — any non-API route serves index.html
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api/')) {
+      res.sendFile(path.join(distDir, 'index.html'))
+    }
+  })
+  console.log(`[kasa-server] serving static from ${distDir}`)
+}
+
+const PORT = process.env.PORT ?? process.env.API_PORT ?? '3001'
+app.listen(parseInt(PORT as string), () => console.log(`[kasa-server] :${PORT}`))

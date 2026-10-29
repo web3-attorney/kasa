@@ -73,7 +73,7 @@ export default function FxRouter({ walletId, walletAddress }: Props) {
 
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '12px 16px', borderRadius: '14px',
-    background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)',
+    background: 'var(--surface-muted)', border: '1px solid var(--border)',
     color: 'var(--t1)', fontSize: '14px', outline: 'none', fontFamily: 'Geist, sans-serif',
   }
   const labelStyle: React.CSSProperties = {
@@ -93,7 +93,7 @@ export default function FxRouter({ walletId, walletAddress }: Props) {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', padding: '24px 0', textAlign: 'center' }}>
         <div style={{ width: '48px', height: '48px', borderRadius: '50%',
           background: 'rgba(34,197,94,.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <CheckCircle2 style={{ width: '24px', height: '24px', color: '#22c55e' }} />
+          <CheckCircle2 style={{ width: '24px', height: '24px', color: 'var(--success)' }} />
         </div>
         <div>
           <p style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--t1)' }}>Payment routed!</p>
@@ -107,7 +107,7 @@ export default function FxRouter({ walletId, walletAddress }: Props) {
         </a>
         <button onClick={() => { setTo(''); setAmount(''); setTxHash(null) }}
           style={{ height: '40px', padding: '0 24px', borderRadius: '12px',
-            background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.12)',
+            background: 'var(--surface)', border: '1px solid var(--border)',
             color: 'var(--t1)', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
           Send another
         </button>
@@ -118,7 +118,7 @@ export default function FxRouter({ walletId, walletAddress }: Props) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '12px 14px', borderRadius: '14px',
-        background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)' }}>
+        background: 'var(--surface-muted)', border: '1px solid var(--border)' }}>
         <Info style={{ width: '14px', height: '14px', color: 'var(--t3)', flexShrink: 0, marginTop: '1px' }} />
         <p style={{ margin: 0, fontSize: '12px', color: 'var(--t3)', lineHeight: 1.5 }}>
           Both USDC and EURC are $1 stablecoins on Arc Testnet. The rate shown is illustrative.
@@ -127,7 +127,7 @@ export default function FxRouter({ walletId, walletAddress }: Props) {
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '10px 14px', borderRadius: '14px',
-        background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)' }}>
+        background: 'var(--surface-muted)', border: '1px solid var(--border)' }}>
         <span style={{ fontSize: '12px', color: 'var(--t3)' }}>{sendToken.symbol} balance</span>
         <span className="mono" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--t1)' }}>{balance}</span>
       </div>
@@ -143,7 +143,7 @@ export default function FxRouter({ walletId, walletAddress }: Props) {
           </div>
         </div>
         <button onClick={swap} style={{ marginTop: '20px', padding: '8px', borderRadius: '12px',
-          background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.12)',
+          background: 'var(--surface)', border: '1px solid var(--border)',
           cursor: 'pointer', color: 'var(--t2)', flexShrink: 0 }}>
           <ArrowLeftRight style={{ width: '14px', height: '14px' }} />
         </button>
@@ -159,7 +159,7 @@ export default function FxRouter({ walletId, walletAddress }: Props) {
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', borderRadius: '14px',
-        background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)' }}>
+        background: 'var(--surface-muted)', border: '1px solid var(--border)' }}>
         <span style={{ fontSize: '12px', color: 'var(--t3)' }}>Rate</span>
         <span className="mono" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--t2)' }}>
           1 {sendToken.symbol} = {rate.toFixed(4)} {receiveToken.symbol}
@@ -169,7 +169,7 @@ export default function FxRouter({ walletId, walletAddress }: Props) {
       <div>
         <label style={labelStyle}>Recipient</label>
         <input type="text" value={to} onChange={e => setTo(e.target.value.trim())} placeholder="0x…" style={inputStyle} />
-        {to && !isAddress(to) && <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#f87171' }}>Enter a valid EVM address</p>}
+        {to && !isAddress(to) && <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--danger)' }}>Enter a valid EVM address</p>}
       </div>
 
       <div>

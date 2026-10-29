@@ -77,6 +77,18 @@ export default function AutoSave({ walletId, walletAddress }: Props) {
   const [balanceRaw, setBalanceRaw] = useState<bigint | undefined>()
   const [allowanceRaw, setAllowanceRaw] = useState<bigint | undefined>()
 
+  // Persist the "user cancelled" override across tab switches via sessionStorage.
+  // Key is wallet-specific so different accounts don't share state.
+  const [withdrawn, setWithdrawnState] = useState(() =>
+    sessionStorage.getItem(`kasa-autosave-cancelled-${walletAddress ?? ''}`) === '1'
+  )
+  const setWithdrawn = useCallback((val: boolean) => {
+    const key = `kasa-autosave-cancelled-${walletAddress ?? ''}`
+    if (val) sessionStorage.setItem(key, '1')
+    else sessionStorage.removeItem(key)
+    setWithdrawnState(val)
+  }, [walletAddress])
+
   const refetch = useCallback(async () => {
     if (!walletAddress) return
     const addr = walletAddress as `0x${string}`
@@ -97,7 +109,8 @@ export default function AutoSave({ walletId, walletAddress }: Props) {
   const planDays       = planData ? Number(planData[1]) : 0
   const planEndTime    = planData ? planData[3] : 0n
   const planBalance    = planData ? planData[4] : 0n
-  const planActive     = planData ? planData[5] : false
+  // withdrawn overrides onchain active — contract keeps endTime set after withdraw
+  const planActive     = withdrawn ? false : (planData ? planData[5] : false)
   const planBalanceFmt = Amount.fromRaw(planBalance, usdcDecimalsFor(ARC_TESTNET_ID)).toFixed(2)
   const balanceFmt     = balanceRaw !== undefined ? Amount.fromRaw(balanceRaw, usdcDecimalsFor(ARC_TESTNET_ID)).toFixed(2) : '—'
   const hasApproval    = allowanceRaw !== undefined && allowanceRaw > 0n
@@ -109,6 +122,7 @@ export default function AutoSave({ walletId, walletAddress }: Props) {
       await serverContractCall(walletId, KASA_SAVINGS_ADDR, 'activatePlan(uint8,uint32)', [savePct, durationDays])
       // Register server-side watcher so auto-save fires even when app is closed
       await registerServerPlan(walletId, walletAddress, savePct)
+      setWithdrawn(false) // clear override so onchain state takes over
       toast.success('Savings plan activated!')
       await refetch()
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed') }
@@ -127,15 +141,48 @@ export default function AutoSave({ walletId, walletAddress }: Props) {
     setBusy(false)
   }
 
+  const resetToSetup = useCallback(() => {
+    setSavePct(10)
+    setDurationDays(30)
+    setWithdrawn(true)
+    void refetch()
+  }, [refetch, setWithdrawn])
+
+  // Listen for server-pushed reset (maturity auto-withdraw or manual reset from server)
+  useEffect(() => {
+    if (!walletId) return
+    const token = sessionStorage.getItem('kasaToken') ?? ''
+    const es = new EventSource(`/api/events?token=${token}`)
+    const handler = (e: MessageEvent) => {
+      try {
+        const msg = JSON.parse(e.data as string) as { type: string; reason?: string }
+        if (msg.type === 'autosave-reset') {
+          toast.success(msg.reason ?? 'Auto-save plan completed — set a new plan to continue saving')
+          resetToSetup()
+        }
+      } catch { /* ignore */ }
+    }
+    es.addEventListener('message', handler)
+    return () => { es.removeEventListener('message', handler); es.close() }
+  }, [walletId, resetToSetup])
+
   const handleWithdraw = async () => {
+    if (planBalance === 0n) {
+      // Nothing saved yet — just deactivate the plan without calling withdraw()
+      // (contract reverts on ZeroBalance)
+      if (walletId && walletAddress) await registerServerPlan(walletId, walletAddress, 0)
+      toast.success('Plan cancelled. Set a new plan whenever you\'re ready.')
+      resetToSetup()
+      return
+    }
     setBusy(true); setBusyLabel('Withdrawing…')
     try {
       if (!walletId || !walletAddress) throw new Error('No wallet')
       await serverContractCall(walletId, KASA_SAVINGS_ADDR, 'withdraw()', [])
       // Deactivate server watcher after withdraw
       await registerServerPlan(walletId, walletAddress, 0)
-      toast.success('Savings withdrawn!')
-      await refetch()
+      toast.success('Savings withdrawn! Set a new plan to start saving again.')
+      resetToSetup()
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed') }
     setBusy(false)
   }
@@ -144,44 +191,67 @@ export default function AutoSave({ walletId, walletAddress }: Props) {
   const dayChips = [7, 14, 30, 60, 90, 180, 365]
 
   const chipStyle = (active: boolean): React.CSSProperties => ({
-    padding: '4px 10px', borderRadius: '10px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600,
-    background: active ? 'var(--acc)' : 'rgba(255,255,255,.08)',
-    color: active ? '#0b0b0c' : 'var(--t2)', transition: 'all .15s',
+    padding: '5px 12px', borderRadius: '10px', cursor: 'pointer', fontSize: '12px', fontWeight: 600,
+    background: active ? 'var(--acc)' : '#fff',
+    color: active ? '#fff' : 'var(--t2)',
+    border: active ? 'none' : '1px solid var(--border-strong)',
+    boxShadow: active ? '0 2px 8px rgba(91,80,240,.25)' : '0 1px 2px rgba(13,21,38,.05)',
+    transition: 'all .15s',
   })
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* Balance pill */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '10px 14px', borderRadius: '14px', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)' }}>
-        <span style={{ fontSize: '12px', color: 'var(--t3)' }}>Wallet balance</span>
-        <span className="mono" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--t1)' }}>${balanceFmt} USDC</span>
+        padding: '12px 16px', borderRadius: '14px', background: '#fff', border: '1px solid var(--border)',
+        boxShadow: '0 1px 4px rgba(13,21,38,.06)' }}>
+        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Wallet balance</span>
+        <span className="mono" style={{ fontSize: '15px', fontWeight: 700, color: 'var(--t1)' }}>${balanceFmt} USDC</span>
       </div>
 
       {planActive ? (
-        <div style={{ padding: '16px', borderRadius: '18px', background: 'rgba(34,197,94,.08)', border: '1px solid rgba(34,197,94,.2)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-            <Activity style={{ width: '14px', height: '14px', color: '#22c55e' }} />
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#4ade80' }}>Savings plan active</span>
-            <span style={{ marginLeft: 'auto', fontSize: '11px', color: '#86efac' }}>{daysLeft(planEndTime)}</span>
+        /* ── Active plan card ── */
+        <div style={{ padding: '18px', borderRadius: '20px',
+          background: 'linear-gradient(135deg, rgba(91,80,240,.08) 0%, rgba(91,80,240,.03) 100%)',
+          border: '1.5px solid rgba(91,80,240,.18)',
+          boxShadow: '0 2px 12px rgba(91,80,240,.08)' }}>
+
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(91,80,240,.12)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Activity style={{ width: '14px', height: '14px', color: 'var(--acc)' }} />
+            </div>
+            <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--t1)' }}>Savings plan active</span>
+            <span style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: 600,
+              color: 'var(--acc)', background: 'rgba(91,80,240,.10)', padding: '2px 8px',
+              borderRadius: '20px' }}>{daysLeft(planEndTime)}</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px', marginBottom: '12px' }}>
+
+          {/* Stats */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px', marginBottom: '14px' }}>
             {[['Saving', `${planPercent}%`], ['Duration', `${planDays}d`], ['Saved', `$${planBalanceFmt}`]].map(([label, val]) => (
-              <div key={label} style={{ textAlign: 'center', padding: '8px', borderRadius: '12px', background: 'rgba(255,255,255,.04)' }}>
-                <p style={{ margin: 0, fontSize: '10px', color: 'var(--t3)' }}>{label}</p>
-                <p className="mono" style={{ margin: '2px 0 0', fontSize: '18px', fontWeight: 700, color: 'var(--t1)' }}>{val}</p>
+              <div key={label} style={{ textAlign: 'center', padding: '10px 8px', borderRadius: '14px',
+                background: '#fff', border: '1px solid var(--border)',
+                boxShadow: '0 1px 3px rgba(13,21,38,.05)' }}>
+                <p style={{ margin: 0, fontSize: '10px', fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{label}</p>
+                <p className="mono" style={{ margin: '4px 0 0', fontSize: '20px', fontWeight: 800, color: 'var(--t1)' }}>{val}</p>
               </div>
             ))}
           </div>
 
+          {/* Approve banner */}
           {!hasApproval && (
-            <div style={{ padding: '12px', borderRadius: '14px', background: 'rgba(251,191,36,.08)', border: '1px solid rgba(251,191,36,.2)', marginBottom: '10px' }}>
+            <div style={{ padding: '12px', borderRadius: '14px',
+              background: 'rgba(234,179,8,.08)', border: '1px solid rgba(234,179,8,.25)', marginBottom: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '10px' }}>
-                <AlertCircle style={{ width: '14px', height: '14px', color: '#fbbf24', flexShrink: 0, marginTop: '1px' }} />
-                <p style={{ margin: 0, fontSize: '12px', color: '#fcd34d', fontWeight: 500 }}>One more step: approve Kasa to auto-save on your behalf</p>
+                <AlertCircle style={{ width: '14px', height: '14px', color: '#b45309', flexShrink: 0, marginTop: '1px' }} />
+                <p style={{ margin: 0, fontSize: '12px', color: '#92400e', fontWeight: 600 }}>Approve Kasa to auto-save on your behalf</p>
               </div>
               <button onClick={() => void handleApprove()} disabled={busy}
                 style={{ width: '100%', height: '36px', borderRadius: '12px', border: 'none',
-                  background: busy ? 'rgba(255,255,255,.08)' : '#fbbf24', color: busy ? 'var(--t3)' : '#0b0b0c',
+                  background: busy ? 'var(--surface-muted)' : '#d97706',
+                  color: busy ? 'var(--t3)' : '#fff',
                   fontWeight: 700, fontSize: '12px', cursor: busy ? 'not-allowed' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                 {busy && busyLabel === 'Approving…' ? <Loader2 style={{ width: '13px', height: '13px', animation: 'spin 1s linear infinite' }} /> : <CheckCircle2 style={{ width: '13px', height: '13px' }} />}
@@ -190,82 +260,104 @@ export default function AutoSave({ walletId, walletAddress }: Props) {
             </div>
           )}
 
+          {/* Watching status */}
           {hasApproval && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px', fontSize: '12px', color: '#4ade80' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px',
+              fontSize: '12px', fontWeight: 600, color: 'var(--success)',
+              background: 'rgba(15,123,77,.07)', padding: '8px 12px', borderRadius: '10px' }}>
               <CheckCircle2 style={{ width: '13px', height: '13px' }} />
               Watching for inbound USDC — auto-saving {planPercent}%
             </div>
           )}
 
-          {planBalance > 0n && (
-            <button onClick={() => void handleWithdraw()} disabled={busy}
-              style={{ width: '100%', height: '40px', borderRadius: '12px',
-                background: busy ? 'rgba(255,255,255,.08)' : 'rgba(255,255,255,.12)',
-                border: '1px solid rgba(255,255,255,.18)', color: busy ? 'var(--t3)' : 'var(--t1)',
-                fontWeight: 600, fontSize: '13px', cursor: busy ? 'not-allowed' : 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-              {busy && busyLabel === 'Withdrawing…' ? <Loader2 style={{ width: '14px', height: '14px', animation: 'spin 1s linear infinite' }} /> : <ArrowDownToLine style={{ width: '14px', height: '14px' }} />}
-              {busy && busyLabel === 'Withdrawing…' ? 'Withdrawing…' : `Withdraw $${planBalanceFmt}`}
-            </button>
-          )}
+          {/* Withdraw button */}
+          <button onClick={() => void handleWithdraw()} disabled={busy}
+            style={{ width: '100%', height: '42px', borderRadius: '14px',
+              background: busy ? 'var(--surface-muted)' : '#fff',
+              border: '1.5px solid var(--border-strong)',
+              color: busy ? 'var(--t3)' : 'var(--t1)',
+              fontWeight: 700, fontSize: '13px', cursor: busy ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+              boxShadow: '0 1px 4px rgba(13,21,38,.06)' }}>
+            {busy && busyLabel === 'Withdrawing…'
+              ? <><Loader2 style={{ width: '14px', height: '14px', animation: 'spin 1s linear infinite' }} />Withdrawing…</>
+              : <><ArrowDownToLine style={{ width: '14px', height: '14px', color: 'var(--acc)' }} />
+                  {planBalance > 0n ? `Withdraw $${planBalanceFmt}` : 'Cancel plan'}</>}
+          </button>
         </div>
       ) : (
-        <div style={{ padding: '16px', borderRadius: '18px', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.1)' }}>
-          <p style={{ margin: '0 0 14px', fontSize: '11px', fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t3)' }}>New Savings Plan</p>
+        /* ── Setup card ── */
+        <div style={{ padding: '20px', borderRadius: '20px', background: '#fff',
+          border: '1px solid var(--border)', boxShadow: '0 2px 12px rgba(13,21,38,.06)' }}>
+          <p style={{ margin: '0 0 18px', fontSize: '13px', fontWeight: 700, color: 'var(--t1)',
+            display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <PiggyBank style={{ width: '15px', height: '15px', color: 'var(--acc)' }} />
+            New Savings Plan
+          </p>
 
-          <div style={{ marginBottom: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span style={{ fontSize: '13px', color: 'var(--t2)' }}>Save % of every inbound</span>
-              <span className="mono" style={{ fontSize: '22px', fontWeight: 700, color: 'var(--acc)' }}>{savePct}%</span>
+          {/* % slider */}
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '10px' }}>
+              <span style={{ fontSize: '13px', color: 'var(--t2)', fontWeight: 500 }}>Save % of every inbound</span>
+              <span className="mono" style={{ fontSize: '28px', fontWeight: 800, color: 'var(--acc)', lineHeight: 1 }}>{savePct}%</span>
             </div>
             <input type="range" min={1} max={100} value={savePct} onChange={e => setSavePct(Number(e.target.value))}
-              style={{ width: '100%', accentColor: 'var(--acc)', marginBottom: '8px' }} />
+              style={{ width: '100%', accentColor: 'var(--acc)', marginBottom: '10px' }} />
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               {pctChips.map(p => <button key={p} onClick={() => setSavePct(p)} style={chipStyle(savePct === p)}>{p}%</button>)}
             </div>
           </div>
 
-          <div style={{ marginBottom: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span style={{ fontSize: '13px', color: 'var(--t2)' }}>Save for</span>
-              <span className="mono" style={{ fontSize: '22px', fontWeight: 700, color: 'var(--acc)' }}>{durationDays}d</span>
+          {/* Duration slider */}
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '10px' }}>
+              <span style={{ fontSize: '13px', color: 'var(--t2)', fontWeight: 500 }}>Save for</span>
+              <span className="mono" style={{ fontSize: '28px', fontWeight: 800, color: 'var(--acc)', lineHeight: 1 }}>{durationDays}d</span>
             </div>
             <input type="range" min={1} max={365} value={durationDays} onChange={e => setDurationDays(Number(e.target.value))}
-              style={{ width: '100%', accentColor: 'var(--acc)', marginBottom: '8px' }} />
+              style={{ width: '100%', accentColor: 'var(--acc)', marginBottom: '10px' }} />
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               {dayChips.map(d => <button key={d} onClick={() => setDurationDays(d)} style={chipStyle(durationDays === d)}>{d}d</button>)}
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '12px',
-            background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', fontSize: '12px' }}>
-            <span style={{ color: 'var(--t3)' }}>On a $100 inbound</span>
-            <span style={{ color: 'var(--t1)', fontWeight: 600 }}>
-              → ${(100 * savePct / 100).toFixed(2)} saved · ${(100 * (1 - savePct / 100)).toFixed(2)} kept
+          {/* Preview row */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '10px 14px', borderRadius: '12px',
+            background: 'rgba(91,80,240,.06)', border: '1px solid rgba(91,80,240,.14)', fontSize: '12px' }}>
+            <span style={{ color: 'var(--t3)', fontWeight: 500 }}>On a $100 inbound</span>
+            <span style={{ color: 'var(--acc)', fontWeight: 700 }}>
+              ${(100 * savePct / 100).toFixed(2)} saved · ${(100 * (1 - savePct / 100)).toFixed(2)} kept
             </span>
           </div>
         </div>
       )}
 
+      {/* Activate button */}
       {!planActive && (
         <button onClick={() => void handleActivate()} disabled={busy || !walletId}
-          style={{ width: '100%', height: '48px', borderRadius: '16px',
-            background: !busy && walletId ? 'var(--acc)' : 'rgba(255,255,255,.12)',
-            border: 'none', color: !busy && walletId ? '#0b0b0c' : 'var(--t3)',
-            fontWeight: 700, fontSize: '14px', cursor: !busy && walletId ? 'pointer' : 'not-allowed',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all .2s' }}>
+          style={{ width: '100%', height: '50px', borderRadius: '16px',
+            background: !busy && walletId ? 'var(--acc)' : 'var(--surface-muted)',
+            border: 'none', color: !busy && walletId ? '#fff' : 'var(--t3)',
+            fontWeight: 700, fontSize: '15px', cursor: !busy && walletId ? 'pointer' : 'not-allowed',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            boxShadow: !busy && walletId ? '0 4px 16px rgba(91,80,240,.30)' : 'none',
+            transition: 'all .2s' }}>
           {busy && busyLabel === 'Activating…'
             ? <><Loader2 style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} />Activating…</>
             : <><PiggyBank style={{ width: '16px', height: '16px' }} />Activate — {savePct}% for {durationDays} days</>}
         </button>
       )}
 
-      <div style={{ padding: '10px 14px', borderRadius: '12px', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.06)', fontSize: '11px', color: 'var(--t3)' }}>
+      {/* Info footer */}
+      <div style={{ padding: '10px 14px', borderRadius: '12px',
+        background: 'rgba(91,80,240,.05)', border: '1px solid rgba(91,80,240,.12)',
+        fontSize: '11px', color: 'var(--t2)', lineHeight: 1.5 }}>
         Auto-save runs server-side — your savings continue even when the app is closed. Check the History tab to see deposits.
       </div>
 
-      <div style={{ padding: '12px 14px', borderRadius: '14px', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.06)', fontSize: '12px' }}>
-        <p style={{ margin: '0 0 4px', fontWeight: 600, color: 'var(--t2)' }}>KasaSavings contract</p>
+      <div style={{ padding: '12px 14px', borderRadius: '14px', background: '#fff', border: '1px solid var(--border)', fontSize: '12px', boxShadow: '0 1px 3px rgba(13,21,38,.04)' }}>
+        <p style={{ margin: '0 0 4px', fontWeight: 700, color: 'var(--t1)' }}>KasaSavings contract</p>
         <a href={buildAddressExplorerUrl(ARC_TESTNET_ID, KASA_SAVINGS_ADDR)} target="_blank" rel="noopener noreferrer"
           style={{ fontFamily: 'monospace', fontSize: '11px', color: 'var(--acc)', wordBreak: 'break-all', textDecoration: 'none' }}>
           {KASA_SAVINGS_ADDR}

@@ -12,6 +12,8 @@
 
 import './tracing'
 import './console-capture'
+import { initRipple } from './ripple'
+initRipple()
 
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'

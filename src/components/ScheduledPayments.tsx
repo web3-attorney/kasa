@@ -25,13 +25,13 @@ const FREQ_OPTIONS = [
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '11px 14px', borderRadius: '12px',
-  background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)',
-  color: '#fff', fontSize: '14px', outline: 'none', fontFamily: 'Geist, sans-serif',
+  background: 'var(--surface-muted)', border: '1px solid var(--border)',
+  color: 'var(--t1)', fontSize: '14px', outline: 'none', fontFamily: 'Geist, sans-serif',
   boxSizing: 'border-box',
 }
 const labelStyle: React.CSSProperties = {
   fontSize: '11px', fontWeight: 600, letterSpacing: '.06em',
-  textTransform: 'uppercase', color: 'rgba(255,255,255,.4)', marginBottom: '5px', display: 'block',
+  textTransform: 'uppercase', color: 'var(--t3)', marginBottom: '5px', display: 'block',
 }
 
 export default function ScheduledPayments({ walletId }: Props) {
@@ -77,7 +77,7 @@ export default function ScheduledPayments({ walletId }: Props) {
 
   const card: React.CSSProperties = {
     padding: '14px', borderRadius: '16px',
-    background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)',
+    background: 'var(--surface-muted)', border: '1px solid var(--border)',
   }
 
   return (
@@ -86,8 +86,8 @@ export default function ScheduledPayments({ walletId }: Props) {
       {/* Existing schedules */}
       {schedules.length === 0 && !showing && (
         <div style={{ ...card, textAlign: 'center', padding: '32px 20px' }}>
-          <Calendar style={{ width: '28px', height: '28px', color: 'rgba(255,255,255,.2)', margin: '0 auto 10px' }} />
-          <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,.4)' }}>No scheduled payments yet</p>
+          <Calendar style={{ width: '28px', height: '28px', color: 'var(--t3)', margin: '0 auto 10px' }} />
+          <p style={{ margin: 0, fontSize: '13px', color: 'var(--t3)' }}>No scheduled payments yet</p>
           <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'rgba(255,255,255,.25)' }}>Set up a recurring send for rent, subscriptions, or savings</p>
         </div>
       )}
@@ -97,30 +97,30 @@ export default function ScheduledPayments({ walletId }: Props) {
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                <CheckCircle2 style={{ width: '13px', height: '13px', color: '#22c55e', flexShrink: 0 }} />
-                <span style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>{s.label || 'Unnamed'}</span>
+                <CheckCircle2 style={{ width: '13px', height: '13px', color: 'var(--success)', flexShrink: 0 }} />
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--t1)' }}>{s.label || 'Unnamed'}</span>
                 <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--acc)', fontWeight: 600 }}>${s.amount} USDC</span>
               </div>
-              <p style={{ margin: 0, fontSize: '11px', color: 'rgba(255,255,255,.4)', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <p style={{ margin: 0, fontSize: '11px', color: 'var(--t3)', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {s.toAddress}
               </p>
               <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,.4)' }}>
+                <span style={{ fontSize: '11px', color: 'var(--t3)' }}>
                   <Clock style={{ width: '10px', height: '10px', display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} />
                   {s.cronHuman}
                 </span>
-                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,.3)' }}>
+                <span style={{ fontSize: '11px', color: 'var(--t3)' }}>
                   Next: {new Date(s.nextRun).toLocaleDateString()}
                 </span>
                 {s.lastRun && (
-                  <span style={{ fontSize: '11px', color: 'rgba(255,255,255,.3)' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--t3)' }}>
                     Last: {new Date(s.lastRun).toLocaleDateString()}
                   </span>
                 )}
               </div>
             </div>
             <button onClick={() => void handleDelete(s.id)}
-              style={{ padding: '6px', borderRadius: '8px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,.3)', flexShrink: 0 }}>
+              style={{ padding: '6px', borderRadius: '8px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--t3)', flexShrink: 0 }}>
               <Trash2 style={{ width: '14px', height: '14px' }} />
             </button>
           </div>
@@ -130,7 +130,7 @@ export default function ScheduledPayments({ walletId }: Props) {
       {/* Create form */}
       {showing && (
         <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#fff' }}>New scheduled payment</p>
+          <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: 'var(--t1)' }}>New scheduled payment</p>
 
           <div>
             <label style={labelStyle}>Label (optional)</label>
@@ -139,7 +139,7 @@ export default function ScheduledPayments({ walletId }: Props) {
           <div>
             <label style={labelStyle}>To address</label>
             <input style={inputStyle} value={toAddress} onChange={e => setToAddress(e.target.value.trim())} placeholder="0x…" />
-            {toAddress && !isAddress(toAddress) && <p style={{ margin: '3px 0 0', fontSize: '11px', color: '#f87171' }}>Invalid address</p>}
+            {toAddress && !isAddress(toAddress) && <p style={{ margin: '3px 0 0', fontSize: '11px', color: 'var(--danger)' }}>Invalid address</p>}
           </div>
           <div>
             <label style={labelStyle}>Amount (USDC)</label>
@@ -161,7 +161,7 @@ export default function ScheduledPayments({ walletId }: Props) {
 
           <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
             <button onClick={() => setShowing(false)}
-              style={{ flex: 1, height: '40px', borderRadius: '12px', background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)', color: 'rgba(255,255,255,.6)', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
+              style={{ flex: 1, height: '40px', borderRadius: '12px', background: 'var(--surface-muted)', border: '1px solid var(--border)', color: 'var(--t2)', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
               Cancel
             </button>
             <button onClick={() => void handleCreate()}
@@ -181,7 +181,7 @@ export default function ScheduledPayments({ walletId }: Props) {
       {!showing && (
         <button onClick={() => setShowing(true)}
           style={{ width: '100%', height: '44px', borderRadius: '14px', border: '1px dashed rgba(255,255,255,.18)',
-            background: 'transparent', color: 'rgba(255,255,255,.5)', fontWeight: 600, fontSize: '13px', cursor: 'pointer',
+            background: 'transparent', color: 'var(--t2)', fontWeight: 600, fontSize: '13px', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all .2s' }}>
           <Plus style={{ width: '15px', height: '15px' }} />
           New scheduled payment

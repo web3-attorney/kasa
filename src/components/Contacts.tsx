@@ -25,7 +25,7 @@ interface Props {
 
 const card: React.CSSProperties = {
   padding: '14px 16px', borderRadius: '16px',
-  background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)',
+  background: 'var(--surface-muted)', border: '1px solid var(--border)',
 }
 
 export default function Contacts({ walletId, pickerMode, onSelect }: Props) {
@@ -99,8 +99,8 @@ export default function Contacts({ walletId, pickerMode, onSelect }: Props) {
 
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '10px 12px', borderRadius: '10px',
-    background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)',
-    color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box',
+    background: 'var(--surface-muted)', border: '1px solid var(--border)',
+    color: 'var(--t1)', fontSize: '14px', outline: 'none', boxSizing: 'border-box',
   }
 
   const shortAddr = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`
@@ -112,13 +112,13 @@ export default function Contacts({ walletId, pickerMode, onSelect }: Props) {
       {!pickerMode && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Users style={{ width: 15, height: 15, color: '#E8FF1F' }} />
+            <Users style={{ width: 15, height: 15, color: 'var(--acc)' }} />
             <p style={{ margin: 0, fontSize: '11px', fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,.35)' }}>
               {list.length} contact{list.length !== 1 ? 's' : ''}
             </p>
           </div>
           <button onClick={() => setShowAdd(v => !v)}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '10px', background: showAdd ? 'rgba(232,255,31,.15)' : 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)', color: showAdd ? '#E8FF1F' : '#fff', fontSize: '12px', cursor: 'pointer' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '10px', background: showAdd ? 'rgba(232,255,31,.15)' : 'rgba(255,255,255,.06)', border: '1px solid var(--border)', color: showAdd ? 'var(--acc)' : '#fff', fontSize: '12px', cursor: 'pointer' }}>
             <UserPlus style={{ width: 13, height: 13 }} />
             Add contact
           </button>
@@ -140,11 +140,11 @@ export default function Contacts({ walletId, pickerMode, onSelect }: Props) {
           <input style={inputStyle} placeholder="Note (optional)" value={newMemo} onChange={e => setNewMemo(e.target.value)} />
           <div style={{ display: 'flex', gap: '8px' }}>
             <button onClick={() => void handleAdd()} disabled={adding || !newName.trim() || !isAddress(newAddr.trim())}
-              style={{ flex: 1, padding: '10px', borderRadius: '10px', background: '#E8FF1F', color: '#0b0b0c', fontSize: '13px', fontWeight: 700, border: 'none', cursor: adding ? 'wait' : 'pointer', opacity: !newName.trim() || !isAddress(newAddr.trim()) ? 0.4 : 1 }}>
+              style={{ flex: 1, padding: '10px', borderRadius: '10px', background: 'var(--acc)', color: 'var(--t1)', fontSize: '13px', fontWeight: 700, border: 'none', cursor: adding ? 'wait' : 'pointer', opacity: !newName.trim() || !isAddress(newAddr.trim()) ? 0.4 : 1 }}>
               {adding ? 'Saving…' : 'Save contact'}
             </button>
             <button onClick={() => setShowAdd(false)}
-              style={{ padding: '10px 14px', borderRadius: '10px', background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)', color: 'rgba(255,255,255,.5)', fontSize: '13px', cursor: 'pointer' }}>
+              style={{ padding: '10px 14px', borderRadius: '10px', background: 'var(--surface-muted)', border: '1px solid var(--border)', color: 'var(--t2)', fontSize: '13px', cursor: 'pointer' }}>
               Cancel
             </button>
           </div>
@@ -152,12 +152,12 @@ export default function Contacts({ walletId, pickerMode, onSelect }: Props) {
       )}
 
       {/* Contact list */}
-      {loading && <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,.3)', textAlign: 'center', padding: '20px' }}>Loading…</p>}
+      {loading && <p style={{ margin: 0, fontSize: '13px', color: 'var(--t3)', textAlign: 'center', padding: '20px' }}>Loading…</p>}
 
       {!loading && list.length === 0 && (
         <div style={{ ...card, textAlign: 'center', padding: '28px 16px' }}>
-          <Users style={{ width: 28, height: 28, color: 'rgba(255,255,255,.15)', margin: '0 auto 10px' }} />
-          <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,.3)' }}>
+          <Users style={{ width: 28, height: 28, color: 'var(--surface-muted)', margin: '0 auto 10px' }} />
+          <p style={{ margin: 0, fontSize: '13px', color: 'var(--t3)' }}>
             {pickerMode ? 'No contacts saved yet' : 'No contacts yet — add one above'}
           </p>
         </div>
@@ -173,11 +173,11 @@ export default function Contacts({ walletId, pickerMode, onSelect }: Props) {
               <input style={inputStyle} value={editMemo} onChange={e => setEditMemo(e.target.value)} placeholder="Note (optional)" />
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button onClick={() => void handleEdit(c.id)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 14px', borderRadius: '8px', background: '#E8FF1F', color: '#0b0b0c', fontSize: '12px', fontWeight: 700, border: 'none', cursor: 'pointer' }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 14px', borderRadius: '8px', background: 'var(--acc)', color: 'var(--t1)', fontSize: '12px', fontWeight: 700, border: 'none', cursor: 'pointer' }}>
                   <Check style={{ width: 12, height: 12 }} /> Save
                 </button>
                 <button onClick={() => setEditId(null)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 14px', borderRadius: '8px', background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)', color: 'rgba(255,255,255,.5)', fontSize: '12px', cursor: 'pointer' }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 14px', borderRadius: '8px', background: 'var(--surface-muted)', border: '1px solid var(--border)', color: 'var(--t2)', fontSize: '12px', cursor: 'pointer' }}>
                   <X style={{ width: 12, height: 12 }} /> Cancel
                 </button>
               </div>
@@ -186,13 +186,13 @@ export default function Contacts({ walletId, pickerMode, onSelect }: Props) {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
               {/* Avatar + info */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'rgba(232,255,31,.15)', border: '1px solid rgba(232,255,31,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '15px', fontWeight: 700, color: '#E8FF1F' }}>
+                <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'rgba(108,99,255,.15)', border: '1px solid rgba(108,99,255,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '15px', fontWeight: 700, color: 'var(--acc)' }}>
                   {c.name.charAt(0).toUpperCase()}
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</p>
-                  <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'rgba(255,255,255,.4)', fontFamily: 'monospace' }}>{shortAddr(c.address)}</p>
-                  {c.memo && <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'rgba(255,255,255,.3)' }}>{c.memo}</p>}
+                  <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</p>
+                  <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--t3)', fontFamily: 'monospace' }}>{shortAddr(c.address)}</p>
+                  {c.memo && <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--t3)' }}>{c.memo}</p>}
                 </div>
               </div>
 
@@ -200,11 +200,11 @@ export default function Contacts({ walletId, pickerMode, onSelect }: Props) {
               {!pickerMode && (
                 <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
                   <button title="Copy address" onClick={e => { e.stopPropagation(); void navigator.clipboard.writeText(c.address); toast.success('Copied') }}
-                    style={{ padding: '7px', borderRadius: '8px', background: 'transparent', border: '1px solid rgba(255,255,255,.08)', color: 'rgba(255,255,255,.4)', cursor: 'pointer' }}>
+                    style={{ padding: '7px', borderRadius: '8px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--t3)', cursor: 'pointer' }}>
                     <Copy style={{ width: 13, height: 13 }} />
                   </button>
                   <button title="Edit" onClick={() => { setEditId(c.id); setEditName(c.name); setEditMemo(c.memo ?? '') }}
-                    style={{ padding: '7px', borderRadius: '8px', background: 'transparent', border: '1px solid rgba(255,255,255,.08)', color: 'rgba(255,255,255,.4)', cursor: 'pointer' }}>
+                    style={{ padding: '7px', borderRadius: '8px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--t3)', cursor: 'pointer' }}>
                     <Edit3 style={{ width: 13, height: 13 }} />
                   </button>
                   <button title="Delete" onClick={() => void handleDelete(c.id, c.name)}
@@ -215,7 +215,7 @@ export default function Contacts({ walletId, pickerMode, onSelect }: Props) {
               )}
 
               {pickerMode && (
-                <div style={{ padding: '5px 12px', borderRadius: '8px', background: 'rgba(232,255,31,.1)', border: '1px solid rgba(232,255,31,.2)', fontSize: '12px', color: '#E8FF1F', flexShrink: 0 }}>
+                <div style={{ padding: '5px 12px', borderRadius: '8px', background: 'rgba(232,255,31,.1)', border: '1px solid rgba(232,255,31,.2)', fontSize: '12px', color: 'var(--acc)', flexShrink: 0 }}>
                   Send
                 </div>
               )}

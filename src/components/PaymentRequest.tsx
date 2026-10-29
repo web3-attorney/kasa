@@ -11,13 +11,13 @@ interface Props { walletId?: string; walletAddress?: string; username?: string }
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '11px 14px', borderRadius: '12px',
-  background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.12)',
-  color: '#fff', fontSize: '14px', outline: 'none', fontFamily: 'Geist, sans-serif',
+  background: 'var(--surface-muted)', border: '1px solid var(--border)',
+  color: 'var(--t1)', fontSize: '14px', outline: 'none', fontFamily: 'Geist, sans-serif',
   boxSizing: 'border-box',
 }
 const labelStyle: React.CSSProperties = {
   fontSize: '11px', fontWeight: 600, letterSpacing: '.06em',
-  textTransform: 'uppercase', color: 'rgba(255,255,255,.4)', marginBottom: '5px', display: 'block',
+  textTransform: 'uppercase', color: 'var(--t3)', marginBottom: '5px', display: 'block',
 }
 
 export default function PaymentRequest({ walletId, walletAddress, username }: Props) {
@@ -52,7 +52,7 @@ export default function PaymentRequest({ walletId, walletAddress, username }: Pr
 
   const card: React.CSSProperties = {
     padding: '14px', borderRadius: '16px',
-    background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)',
+    background: 'var(--surface-muted)', border: '1px solid var(--border)',
   }
 
   if (link) {
@@ -60,22 +60,22 @@ export default function PaymentRequest({ walletId, walletAddress, username }: Pr
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
         <div style={{ ...card, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', padding: '28px 20px', textAlign: 'center' }}>
           <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(34,197,94,.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <CheckCircle2 style={{ width: '24px', height: '24px', color: '#22c55e' }} />
+            <CheckCircle2 style={{ width: '24px', height: '24px', color: 'var(--success)' }} />
           </div>
           <div>
-            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#fff' }}>Payment link ready</p>
-            <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'rgba(255,255,255,.45)' }}>Share it with anyone — they pay, you receive</p>
+            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: 'var(--t1)' }}>Payment link ready</p>
+            <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--t2)' }}>Share it with anyone — they pay, you receive</p>
           </div>
-          <div style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', background: 'rgba(232,255,31,.06)', border: '1px solid rgba(232,255,31,.18)', wordBreak: 'break-all', fontSize: '12px', color: 'var(--acc)', fontFamily: 'monospace', textAlign: 'left' }}>
+          <div style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', background: 'rgba(108,99,255,.08)', border: '1px solid rgba(232,255,31,.18)', wordBreak: 'break-all', fontSize: '12px', color: 'var(--acc)', fontFamily: 'monospace', textAlign: 'left' }}>
             {link}
           </div>
           <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
             <button onClick={copyLink}
-              style={{ flex: 1, height: '40px', borderRadius: '12px', background: 'var(--acc)', border: 'none', color: '#0b0b0c', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+              style={{ flex: 1, height: '40px', borderRadius: '12px', background: 'var(--acc)', border: 'none', color: 'var(--t1)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
               <Copy style={{ width: '14px', height: '14px' }} /> Copy link
             </button>
             <a href={link} target="_blank" rel="noopener noreferrer"
-              style={{ height: '40px', padding: '0 14px', borderRadius: '12px', background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.12)', color: 'rgba(255,255,255,.7)', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}>
+              style={{ height: '40px', padding: '0 14px', borderRadius: '12px', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--t2)', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}>
               <ExternalLink style={{ width: '14px', height: '14px' }} />
             </a>
           </div>
@@ -93,7 +93,7 @@ export default function PaymentRequest({ walletId, walletAddress, username }: Pr
       <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
           <Link style={{ width: '14px', height: '14px', color: 'var(--acc)' }} />
-          <p style={{ margin: 0, fontSize: '12px', color: 'rgba(255,255,255,.45)' }}>
+          <p style={{ margin: 0, fontSize: '12px', color: 'var(--t2)' }}>
             Generate a link anyone can use to pay you — no account needed on their end
           </p>
         </div>

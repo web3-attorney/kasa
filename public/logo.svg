@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#7B74FF"/>
+      <stop offset="100%" stop-color="#4338CA"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#fff" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded square background — app icon shape -->
+  <rect width="120" height="120" rx="28" fill="url(#bg)"/>
+  <!-- Subtle top shine -->
+  <rect width="120" height="120" rx="28" fill="url(#shine)"/>
+
+  <!--
+    K built as filled paths — optical geometry:
+    • Thick vertical stem on the left
+    • Upper arm: diagonal bar from mid-stem to top-right, slightly tapered
+    • Lower leg: diagonal bar from mid-stem to bottom-right, slightly tapered
+    • A small notch where arms meet the stem for visual clarity
+    All strokes rendered as filled shapes so they look like a real typeface cut.
+  -->
+  <g fill="#fff">
+    <!-- Vertical stem: x=34–50, y=24–96 -->
+    <rect x="34" y="24" width="16" height="72" rx="5"/>
+
+    <!-- Upper arm: from stem mid-right (50,60) to top-right (88,24)
+         Rendered as a parallelogram-ish filled path, 14px thick, tapered -->
+    <path d="
+      M 50 54
+      L 88 22
+      Q 91 20 93 23
+      L 93 30
+      Q 92 33 89 35
+      L 55 64
+      Z
+    " rx="3"/>
+
+    <!-- Lower leg: from stem mid-right (50,60) to bottom-right (88,96)
+         Mirror of upper arm -->
+    <path d="
+      M 50 66
+      L 89 85
+      Q 92 87 93 90
+      L 93 97
+      Q 91 100 88 98
+      L 55 76
+      Z
+    " rx="3"/>
+  </g>
+</svg>
