@@ -2,20 +2,41 @@ const CORS={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'au
 const j=(d:unknown,s=200)=>new Response(JSON.stringify(d),{status:s,headers:{...CORS,'Content-Type':'application/json'}})
 const e=(m:string,s=400)=>j({error:m},s)
 const USDC='0x3600000000000000000000000000000000000000'
-async function circlePost(path:string,body:unknown){
-  const r=await fetch(`https://api.circle.com/v1${path}`,{method:'POST',headers:{'Authorization':`Bearer ${Deno.env.get('CIRCLE_API_KEY')}`,'Content-Type':'application/json'},body:JSON.stringify(body)})
-  return r.json() as Promise<{data?:{id?:string};code?:number;message?:string}>
+const ARC_RPC='https://rpc.testnet.arc.io'
+
+async function encryptEntitySecret(entitySecret:string,publicKeyPem:string):Promise<string>{
+  const pem=publicKeyPem.replace(/-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----|\n/g,'')
+  const keyBytes=Uint8Array.from(atob(pem),c=>c.charCodeAt(0))
+  const publicKey=await crypto.subtle.importKey('spki',keyBytes.buffer,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt'])
+  const secretBytes=new Uint8Array(entitySecret.match(/.{2}/g)!.map(h=>parseInt(h,16)))
+  const encrypted=await crypto.subtle.encrypt({name:'RSA-OAEP'},publicKey,secretBytes)
+  return btoa(String.fromCharCode(...new Uint8Array(encrypted)))
 }
-async function waitTx(txId:string){
+async function getCircleHeaders(){
+  const apiKey=Deno.env.get('CIRCLE_API_KEY')!
+  const entitySecret=Deno.env.get('CIRCLE_ENTITY_SECRET')!
+  const pkRes=await fetch('https://api.circle.com/v1/w3s/config/entity/publicKey',{headers:{'Authorization':`Bearer ${apiKey}`}})
+  const pkData=await pkRes.json() as{data:{publicKey:string}}
+  const ciphertext=await encryptEntitySecret(entitySecret,pkData.data.publicKey)
+  return {apiKey,ciphertext}
+}
+async function circlePost(path:string,body:unknown){
+  const{apiKey,ciphertext}=await getCircleHeaders()
+  const r=await fetch(`https://api.circle.com/v1${path}`,{method:'POST',headers:{'Authorization':`Bearer ${apiKey}`,'Content-Type':'application/json'},body:JSON.stringify({...body as object,entitySecretCiphertext:ciphertext})})
+  return r.json()
+}
+async function waitForTx(txId:string):Promise<{state:string;txHash?:string}>{
+  const apiKey=Deno.env.get('CIRCLE_API_KEY')!
   for(let i=0;i<30;i++){
     await new Promise(r=>setTimeout(r,2000))
-    const r=await fetch(`https://api.circle.com/v1/w3s/transactions/${txId}`,{headers:{'Authorization':`Bearer ${Deno.env.get('CIRCLE_API_KEY')}`}})
-    const d=await r.json() as{data?:{transaction?:{state?:string;txHash?:string}}}
-    const st=d.data?.transaction?.state
-    if(st==='COMPLETE')return{state:'COMPLETE',txHash:d.data!.transaction!.txHash??''}
-    if(['FAILED','DENIED','CANCELLED'].includes(st??''))return{state:st,txHash:''}
+    const r=await fetch(`https://api.circle.com/v1/w3s/developer/transactions/${txId}`,{headers:{'Authorization':`Bearer ${apiKey}`}})
+    const d=await r.json() as{data:{transaction:{state:string;txHash?:string}}}
+    const tx=d.data?.transaction
+    if(!tx)continue
+    if(tx.state==='COMPLETE')return{state:'COMPLETE',txHash:tx.txHash}
+    if(['FAILED','DENIED','CANCELLED'].includes(tx.state))return{state:tx.state}
   }
-  return{state:'TIMEOUT',txHash:''}
+  return{state:'TIMEOUT'}
 }
 Deno.serve(async(req)=>{
   if(req.method==='OPTIONS')return new Response(null,{status:204,headers:CORS})
@@ -27,11 +48,12 @@ Deno.serve(async(req)=>{
     const amt32=units.toString(16).padStart(64,'0')
     const txRes=await circlePost('/w3s/developer/transactions/contractExecution',{walletId,contractAddress:USDC,callData:`0xa9059cbb${to32}${amt32}`,fee:{type:'level',config:{feeLevel:'MEDIUM'}},idempotencyKey:crypto.randomUUID()})
     const txId=txRes.data?.id
-    if(!txId)throw new Error('No txId from Circle')
-    const result=await waitTx(txId)
+    if(!txId)throw new Error(txRes.message??'No txId')
+    const result=await waitForTx(txId)
     if(result.state!=='COMPLETE')throw new Error(`Transaction ${result.state}`)
+    // Record tx in Supabase
     const SB_URL=Deno.env.get('SUPABASE_URL')!,SB_KEY=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    await fetch(`${SB_URL}/rest/v1/tx_history`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json','Prefer':'resolution=ignore-duplicates'},body:JSON.stringify({wallet_id:walletId,tx_hash:result.txHash??txId,direction:'out',amount,counterparty:toAddress,memo:memo??'',timestamp:Date.now()})})
+    await fetch(`${SB_URL}/rest/v1/tx_history`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({wallet_id:walletId,tx_hash:result.txHash??txId,direction:'out',amount,counterparty:toAddress,memo:memo??'',timestamp:Date.now()})})
     return j({txId,txHash:result.txHash})
   }catch(err2){return e(err2 instanceof Error?err2.message:'Server error',500)}
 })
