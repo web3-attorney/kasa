@@ -16,7 +16,7 @@ async function encryptEntitySecret(entitySecret: string, publicKeyPem: string): 
   // Encrypt the entity secret (hex string → bytes)
   const secretBytes = new Uint8Array(entitySecret.match(/.{2}/g)!.map(h => parseInt(h, 16)))
   const encrypted = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, publicKey, secretBytes)
-  return btoa(String.fromCharCode(...new Uint8Array(encrypted)))
+  return btoa(Array.from(new Uint8Array(encrypted),b=>String.fromCodePoint(b)).join(''))
 }
 
 async function circleReq(method: string, path: string, body?: unknown) {

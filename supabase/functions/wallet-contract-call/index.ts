@@ -4,11 +4,11 @@ const e=(m:string,s=400)=>j({error:m},s)
 
 async function encryptEntitySecret(entitySecret:string,publicKeyPem:string):Promise<string>{
   const pem=publicKeyPem.replace(/-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----|\n/g,'')
-  const keyBytes=Uint8Array.from(atob(pem),c=>c.charCodeAt(0))
+  const keyBytes=Uint8Array.from(atob(pem),c=>c.codePointAt(0))
   const publicKey=await crypto.subtle.importKey('spki',keyBytes.buffer,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt'])
-  const secretBytes=new Uint8Array(entitySecret.match(/.{2}/g)!.map(h=>parseInt(h,16)))
+  const cleanSecret=entitySecret.trim().replace(/\s+/g,''); const secretBytes=new Uint8Array(cleanSecret.match(/.{2}/g)!.map(h=>parseInt(h,16)))
   const encrypted=await crypto.subtle.encrypt({name:'RSA-OAEP'},publicKey,secretBytes)
-  return btoa(String.fromCharCode(...new Uint8Array(encrypted)))
+  return btoa(Array.from(new Uint8Array(encrypted),b=>String.fromCodePoint(b)).join(''))
 }
 async function circlePost(path:string,body:unknown){
   const apiKey=Deno.env.get('CIRCLE_API_KEY')!
@@ -37,7 +37,7 @@ Deno.serve(async(req)=>{
   try{
     const{walletId,contractAddress,abiFunctionSignature,abiParameters}=await req.json() as{walletId?:string;contractAddress?:string;abiFunctionSignature?:string;abiParameters?:string[]}
     if(!walletId||!contractAddress||!abiFunctionSignature)return e('walletId, contractAddress, abiFunctionSignature required')
-    const txRes=await circlePost('/w3s/developer/transactions/contractExecution',{walletId,contractAddress,abiFunctionSignature,abiParameters:(abiParameters??[]).map(String),fee:{type:'level',config:{feeLevel:'MEDIUM'}},idempotencyKey:crypto.randomUUID()})
+    const txRes=await circlePost('/w3s/developer/transactions/contractExecution',{walletId,contractAddress,abiFunctionSignature,abiParameters:(abiParameters??[]).map(String),feeLevel:'MEDIUM',idempotencyKey:crypto.randomUUID()})
     const txId=txRes.data?.id
     if(!txId)throw new Error(txRes.message??'No txId')
     const result=await waitForTx(txId)
