@@ -3,3 +3,11 @@
 .circle/
 *recovery*
 *.pem
+node_modules/
+dist/
+contracts/out/
+contracts/cache/
+lib/
+.data/
+console.jsonl
+traces.jsonl

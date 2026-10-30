@@ -2,9 +2,10 @@
  * Auth helpers — Resend-powered email OTP via Kasa server.
  * No Supabase dependency.
  */
+import { apiUrl } from './kasaWallet'
 
 export async function sendOtp(email: string): Promise<{ error: string | null }> {
-  const res = await fetch('/api/auth/send-otp', {
+  const res = await fetch(apiUrl('/api/auth/send-otp'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),
@@ -20,7 +21,7 @@ export async function verifyOtp(
   email: string,
   token: string,
 ): Promise<{ verified: boolean; userId: string | null; existingUsername: string | null; error: string | null }> {
-  const res = await fetch('/api/auth/verify-otp', {
+  const res = await fetch(apiUrl('/api/auth/verify-otp'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, code: token }),

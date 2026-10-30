@@ -43,19 +43,54 @@ export function clearSession() {
   sessionStorage.removeItem(TOKEN_KEY)
 }
 
+// ── API URL router ─────────────────────────────────────────────────────────────
+// In dev, all calls proxy to Express on :3001 via Vite's /api/* proxy.
+// In production (Vercel), calls go to Supabase Edge Functions.
+const SB_BASE = (import.meta.env.VITE_SUPABASE_FUNCTIONS_URL as string | undefined) ?? ''
+
+// Maps legacy /api/<path> → Supabase Edge Function name
+const ROUTE_MAP: Record<string, string> = {
+  '/api/auth/send-otp':          'send-otp',
+  '/api/auth/verify-otp':        'verify-otp',
+  '/api/wallet/get-or-create':   'wallet-get-or-create',
+  '/api/wallet/balance':         'wallet-balance',
+  '/api/wallet/send':            'wallet-send',
+  '/api/wallet/contract-call':   'wallet-contract-call',
+  '/api/registry/check':         'registry-check',
+  '/api/registry/lookup':        'registry-lookup',
+  '/api/autosave/register':      'autosave-register',
+  '/api/tx-history':             'tx-history',
+  '/api/contacts':               'contacts',
+  '/api/schedules':              'schedules',
+  '/api/pay-links':              'pay-links',
+  '/api/limits':                 'limits',
+  '/api/limits/send-confirm':    'limits',
+  '/api/limits/verify-confirm':  'limits',
+}
+
+export function apiUrl(path: string): string {
+  if (!SB_BASE) return path // dev: use Vite proxy as-is
+  // Strip query string for lookup, re-append after
+  const [pathname, qs] = path.split('?')
+  const fn = ROUTE_MAP[pathname]
+  if (!fn) return path
+  const base = `${SB_BASE}/${fn}`
+  return qs ? `${base}?${qs}` : base
+}
+
 // ── Authenticated fetch helper ────────────────────────────────────────────────
 function authHeaders(): Record<string, string> {
   return { 'Content-Type': 'application/json' }
 }
 
 export async function apiFetch(url: string, init?: RequestInit): Promise<Response> {
-  return fetch(url, { ...init, headers: { ...authHeaders(), ...(init?.headers ?? {}) } })
+  return fetch(apiUrl(url), { ...init, headers: { ...authHeaders(), ...(init?.headers ?? {}) } })
 }
 
 // ── Get or create a wallet for a user ────────────────────────────────────────
 
 export async function getOrCreateWallet(userId: string, username?: string): Promise<{ walletId: string; address: string; token: string; username: string }> {
-  const res = await fetch('/api/wallet/get-or-create', {
+  const res = await fetch(apiUrl('/api/wallet/get-or-create'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId, username }),
@@ -70,7 +105,7 @@ export async function getOrCreateWallet(userId: string, username?: string): Prom
 // ── Get USDC balance ──────────────────────────────────────────────────────────
 
 export async function getWalletBalance(walletId: string, address: string): Promise<string> {
-  const res = await fetch(`/api/wallet/balance?walletId=${encodeURIComponent(walletId)}&address=${encodeURIComponent(address)}`, { headers: authHeaders() })
+  const res = await fetch(apiUrl(`/api/wallet/balance?walletId=${encodeURIComponent(walletId)}&address=${encodeURIComponent(address)}`), { headers: authHeaders() })
   if (!res.ok) return '0'
   const data = await res.json() as { balance?: string }
   return data.balance ?? '0'
@@ -80,7 +115,7 @@ export async function getWalletBalance(walletId: string, address: string): Promi
 
 export async function sendUsdc(walletId: string, toAddress: string, amountRaw: bigint): Promise<string> {
   const amount = formatUnits(amountRaw, 6)
-  const res = await fetch('/api/wallet/send', {
+  const res = await fetch(apiUrl('/api/wallet/send'), {
     method: 'POST', headers: authHeaders(),
     body: JSON.stringify({ walletId, toAddress, amount }),
   })
@@ -92,7 +127,7 @@ export async function sendUsdc(walletId: string, toAddress: string, amountRaw: b
 // ── Contract call ─────────────────────────────────────────────────────────────
 
 export async function sendContractCall(walletId: string, contractAddress: string, abiFunctionSignature: string, abiParameters: string[]): Promise<string> {
-  const res = await fetch('/api/wallet/contract-call', {
+  const res = await fetch(apiUrl('/api/wallet/contract-call'), {
     method: 'POST', headers: authHeaders(),
     body: JSON.stringify({ walletId, contractAddress, abiFunctionSignature, abiParameters }),
   })
