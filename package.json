@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "build": "vite build",
     "server": "bun run server/index.ts",
     "start": "concurrently \"bun run dev\" \"bun run server\"",
     "deploy:self": "bun run ./scripts/self-deploy.ts",
