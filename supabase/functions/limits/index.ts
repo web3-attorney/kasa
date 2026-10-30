@@ -1,35 +1,31 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { corsResponse, json, err } from '../_shared/cors.ts'
-
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return corsResponse()
-  const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-  const url = new URL(req.url)
-
-  try {
-    if (req.method === 'GET') {
-      const walletId = url.searchParams.get('walletId')
-      if (!walletId) return err('walletId required')
-      const { data } = await sb.from('spend_limits').select('*').eq('wallet_id', walletId).single()
-      if (!data) return json({ dailyLimitUsdc: 0, spentToday: 0, resetAt: Date.now() + 86400_000 })
-      // Auto-reset if day rolled over
-      if (Date.now() > data.reset_at) {
-        await sb.from('spend_limits').update({ spent_today: 0, reset_at: Date.now() + 86400_000 }).eq('wallet_id', walletId)
-        return json({ dailyLimitUsdc: data.daily_limit_usdc, spentToday: 0, resetAt: Date.now() + 86400_000 })
+const CORS={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type','Access-Control-Allow-Methods':'GET, POST, PUT, DELETE, OPTIONS'}
+const j=(d:unknown,s=200)=>new Response(JSON.stringify(d),{status:s,headers:{...CORS,'Content-Type':'application/json'}})
+const e=(m:string,s=400)=>j({error:m},s)
+Deno.serve(async(req)=>{
+  if(req.method==='OPTIONS')return new Response(null,{status:204,headers:CORS})
+  const SB_URL=Deno.env.get('SUPABASE_URL')!,SB_KEY=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  const h={'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json','Accept':'application/json'}
+  const url=new URL(req.url)
+  try{
+    if(req.method==='GET'){
+      const wId=url.searchParams.get('walletId')
+      if(!wId)return e('walletId required')
+      const r=await fetch(`${SB_URL}/rest/v1/spend_limits?wallet_id=eq.${encodeURIComponent(wId)}&limit=1`,{headers:h})
+      const rows=await r.json() as Record<string,unknown>[]
+      if(!rows[0])return j({dailyLimitUsdc:0,spentToday:0,resetAt:Date.now()+86400_000})
+      const d=rows[0]
+      if(Date.now()>(d.reset_at as number)){
+        await fetch(`${SB_URL}/rest/v1/spend_limits?wallet_id=eq.${encodeURIComponent(wId)}`,{method:'PATCH',headers:h,body:JSON.stringify({spent_today:0,reset_at:Date.now()+86400_000})})
+        return j({dailyLimitUsdc:d.daily_limit_usdc,spentToday:0,resetAt:Date.now()+86400_000})
       }
-      return json({ dailyLimitUsdc: data.daily_limit_usdc, spentToday: data.spent_today, resetAt: data.reset_at })
+      return j({dailyLimitUsdc:d.daily_limit_usdc,spentToday:d.spent_today,resetAt:d.reset_at})
     }
-
-    if (req.method === 'POST') {
-      const { walletId, dailyLimitUsdc } = await req.json() as { walletId?: string; dailyLimitUsdc?: number }
-      if (!walletId || dailyLimitUsdc === undefined) return err('missing fields')
-      await sb.from('spend_limits').upsert({
-        wallet_id: walletId, daily_limit_usdc: dailyLimitUsdc,
-        spent_today: 0, reset_at: Date.now() + 86400_000,
-      }, { onConflict: 'wallet_id' })
-      return json({ ok: true })
+    if(req.method==='POST'){
+      const{walletId,dailyLimitUsdc}=await req.json() as{walletId?:string;dailyLimitUsdc?:number}
+      if(!walletId||dailyLimitUsdc===undefined)return e('missing fields')
+      await fetch(`${SB_URL}/rest/v1/spend_limits`,{method:'POST',headers:{...h,'Prefer':'resolution=merge-duplicates'},body:JSON.stringify({wallet_id:walletId,daily_limit_usdc:dailyLimitUsdc,spent_today:0,reset_at:Date.now()+86400_000})})
+      return j({ok:true})
     }
-
-    return err('Method not allowed', 405)
-  } catch (e) { return err(e instanceof Error ? e.message : 'Failed', 500) }
+    return e('Method not allowed',405)
+  }catch(err2){return e(err2 instanceof Error?err2.message:'Failed',500)}
 })

@@ -1,0 +1,75 @@
+project_id = "hkoiumeiwrgxmigcuewe"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+jwt_expiry = 3600
+enable_signup = true
+
+[edge_runtime]
+enabled = true
+
+[functions.send-otp]
+verify_jwt = false
+
+[functions.verify-otp]
+verify_jwt = false
+
+[functions.wallet-get-or-create]
+verify_jwt = false
+
+[functions.wallet-balance]
+verify_jwt = false
+
+[functions.wallet-send]
+verify_jwt = false
+
+[functions.wallet-contract-call]
+verify_jwt = false
+
+[functions.registry-check]
+verify_jwt = false
+
+[functions.registry-lookup]
+verify_jwt = false
+
+[functions.autosave-register]
+verify_jwt = false
+
+[functions.tx-history]
+verify_jwt = false
+
+[functions.contacts]
+verify_jwt = false
+
+[functions.schedules]
+verify_jwt = false
+
+[functions.pay-links]
+verify_jwt = false
+
+[functions.limits]
+verify_jwt = false

@@ -1,85 +1,49 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { corsResponse, json, err } from '../_shared/cors.ts'
-import { getOrCreateWalletSet, circleGet, circlePost, REGISTRY_ADDR, rpcCall } from '../_shared/circle.ts'
-import { SignJWT } from 'https://deno.land/x/jose@v4.15.4/index.ts'
-
-const JWT_SECRET = new TextEncoder().encode(Deno.env.get('JWT_SECRET')!)
-
-async function encodePackedHash(username: string, salt: string): Promise<string> {
-  const usernameHex = Array.from(new TextEncoder().encode(username)).map(b => b.toString(16).padStart(2,'0')).join('')
-  const saltHex = salt.replace('0x','').padStart(64,'0')
-  return await rpcCall<string>('web3_sha3', ['0x' + usernameHex + saltHex])
+const CORS={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type','Access-Control-Allow-Methods':'GET, POST, PUT, DELETE, OPTIONS'}
+const j=(d:unknown,s=200)=>new Response(JSON.stringify(d),{status:s,headers:{...CORS,'Content-Type':'application/json'}})
+const e=(m:string,s=400)=>j({error:m},s)
+async function circlePost(path:string,body:unknown){
+  const r=await fetch(`https://api.circle.com/v1${path}`,{method:'POST',headers:{'Authorization':`Bearer ${Deno.env.get('CIRCLE_API_KEY')}`,'Content-Type':'application/json','X-User-Agent':'kasa/1.0'},body:JSON.stringify(body)})
+  return r.json()
 }
-
-async function registerUsernameOnchain(walletId: string, address: string, username: string) {
-  if (!REGISTRY_ADDR || username.length < 3) return
-  try {
-    const salt = '0x' + address.toLowerCase().replace('0x','').padStart(64,'0')
-    const commitment = await encodePackedHash(username, salt)
-    if (!commitment || commitment === '0x') return
-    await circlePost('/developer/transactions/contractExecution', {
-      walletId, contractAddress: REGISTRY_ADDR,
-      abiFunctionSignature: 'commit(bytes32)', abiParameters: [commitment],
-      fee: { type: 'level', config: { feeLevel: 'MEDIUM' } },
-      idempotencyKey: `commit-${walletId}-${username}`,
-    })
-    await new Promise(r => setTimeout(r, 4000))
-    await circlePost('/developer/transactions/contractExecution', {
-      walletId, contractAddress: REGISTRY_ADDR,
-      abiFunctionSignature: 'register(string,bytes32)', abiParameters: [username, salt],
-      fee: { type: 'level', config: { feeLevel: 'MEDIUM' } },
-      idempotencyKey: `register-${walletId}-${username}`,
-    })
-  } catch (e) { console.warn('[registry] failed:', e) }
+async function circleGet(path:string){
+  const r=await fetch(`https://api.circle.com/v1${path}`,{headers:{'Authorization':`Bearer ${Deno.env.get('CIRCLE_API_KEY')}`,'Content-Type':'application/json'}})
+  return r.json()
 }
-
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return corsResponse()
-  try {
-    const { userId, username: requestedUsername } = await req.json() as { userId?: string; username?: string }
-    if (!userId) return err('userId required')
-
-    const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-    const { data: existingProfile } = await sb.from('profiles').select('username').eq('user_id', userId).single()
-    const finalUsername = existingProfile?.username ?? requestedUsername
-    if (!finalUsername) return err('username required for new users')
-
-    const wsId = await getOrCreateWalletSet()
-    // Find existing wallet by refId
-    const walletListRes = await circleGet(`/developer/wallets?walletSetId=${wsId}&pageSize=50`)
-    const wallets = walletListRes.data?.wallets ?? []
-    const existing = wallets.find((w: { refId?: string }) => w.refId === userId)
-
-    let walletId: string, address: string, isNew = false
-    if (existing) {
-      walletId = existing.id; address = existing.address
-    } else {
-      isNew = true
-      const cr = await circlePost('/developer/wallets', {
-        accountType: 'EOA', blockchains: ['ARC-TESTNET'], count: 1,
-        walletSetId: wsId,
-        metadata: [{ name: `Kasa:${userId}`, refId: userId }],
-        idempotencyKey: `wallet-${userId}`,
-      })
-      const w = cr.data?.wallets?.[0]
-      if (!w) throw new Error('Wallet creation failed')
-      walletId = w.id; address = w.address
+Deno.serve(async(req)=>{
+  if(req.method==='OPTIONS')return new Response(null,{status:204,headers:CORS})
+  try{
+    const{userId,username:requestedUsername}=await req.json() as{userId?:string;username?:string}
+    if(!userId)return e('userId required')
+    const SB_URL=Deno.env.get('SUPABASE_URL')!,SB_KEY=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const sbH={'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Accept':'application/json','Content-Type':'application/json'}
+    // Check existing profile
+    const pr=await(await fetch(`${SB_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&limit=1`,{headers:sbH})).json() as Record<string,unknown>[]
+    const existingProfile=pr[0]
+    const finalUsername=(existingProfile?.username as string)??requestedUsername
+    if(!finalUsername)return e('username required for new users')
+    // Get or create wallet set
+    const wsRes=await circleGet('/w3s/walletSets?pageSize=1')
+    let wsId=wsRes.data?.walletSets?.[0]?.id
+    if(!wsId){const cr=await circlePost('/w3s/walletSets',{name:'Kasa Users',idempotencyKey:crypto.randomUUID()});wsId=cr.data?.walletSet?.id}
+    if(!wsId)return e('Wallet set error')
+    // Find existing wallet
+    const wlRes=await circleGet(`/w3s/wallets?walletSetId=${wsId}&pageSize=50`)
+    const wallets=wlRes.data?.wallets??[]
+    let wallet=wallets.find((w:Record<string,unknown>)=>w.refId===userId)
+    let isNew=false
+    if(!wallet){
+      const cr=await circlePost('/w3s/wallets',{accountType:'EOA',blockchains:['ARC-TESTNET'],count:1,walletSetId:wsId,metadata:[{name:`Kasa:${userId}`,refId:userId}],idempotencyKey:crypto.randomUUID()})
+      wallet=cr.data?.wallets?.[0]
+      isNew=true
     }
-
-    if (!existingProfile) {
-      await sb.from('profiles').upsert({ user_id: userId, username: finalUsername, created_at: Date.now() })
+    if(!wallet)return e('Wallet creation failed')
+    // Save profile if new
+    if(!existingProfile){
+      await fetch(`${SB_URL}/rest/v1/profiles`,{method:'POST',headers:{...sbH,'Prefer':'resolution=merge-duplicates'},body:JSON.stringify({user_id:userId,username:finalUsername,created_at:Date.now()})})
     }
-
-    const token = await new SignJWT({ userId, walletId })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setExpirationTime('30d')
-      .sign(JWT_SECRET)
-
-    // Register username onchain in background (new wallets only)
-    if (isNew && address) {
-      EdgeRuntime.waitUntil(registerUsernameOnchain(walletId, address, finalUsername))
-    }
-
-    return json({ walletId, address, username: finalUsername, token })
-  } catch (e) { return err(e instanceof Error ? e.message : 'Server error', 500) }
+    // Simple JWT
+    const payload=btoa(JSON.stringify({userId,walletId:wallet.id,exp:Math.floor(Date.now()/1000)+2592000}))
+    const token=`kasa.${payload}.sig`
+    return j({walletId:wallet.id,address:wallet.address,username:finalUsername,token,isNew})
+  }catch(err2){return e(err2 instanceof Error?err2.message:'Server error',500)}
 })

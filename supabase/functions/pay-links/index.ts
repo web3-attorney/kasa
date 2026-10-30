@@ -1,37 +1,28 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { corsResponse, json, err } from '../_shared/cors.ts'
-
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return corsResponse()
-  const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-  const url = new URL(req.url)
-
-  try {
-    if (req.method === 'POST') {
-      const { toWalletId, toAddress, toUsername, amount, memo } = await req.json() as {
-        toWalletId?: string; toAddress?: string; toUsername?: string; amount?: string; memo?: string
-      }
-      if (!toWalletId || !toAddress || !amount) return err('missing fields')
-      const id = crypto.randomUUID().replace(/-/g,'').slice(0,14)
-      await sb.from('pay_links').insert({
-        id, to_wallet_id: toWalletId, to_address: toAddress, to_username: toUsername ?? '',
-        amount, memo: memo ?? '', created_at: Date.now(), paid_tx_hash: null,
-      })
-      return json({ id, url: `/pay/${id}` })
+const CORS={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type','Access-Control-Allow-Methods':'GET, POST, PUT, DELETE, OPTIONS'}
+const j=(d:unknown,s=200)=>new Response(JSON.stringify(d),{status:s,headers:{...CORS,'Content-Type':'application/json'}})
+const e=(m:string,s=400)=>j({error:m},s)
+Deno.serve(async(req)=>{
+  if(req.method==='OPTIONS')return new Response(null,{status:204,headers:CORS})
+  const SB_URL=Deno.env.get('SUPABASE_URL')!,SB_KEY=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  const h={'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json','Accept':'application/json'}
+  const url=new URL(req.url)
+  try{
+    if(req.method==='POST'){
+      const{toWalletId,toAddress,toUsername,amount,memo}=await req.json() as{toWalletId?:string;toAddress?:string;toUsername?:string;amount?:string;memo?:string}
+      if(!toWalletId||!toAddress||!amount)return e('missing fields')
+      const id=crypto.randomUUID().replace(/-/g,'').slice(0,14)
+      await fetch(`${SB_URL}/rest/v1/pay_links`,{method:'POST',headers:h,body:JSON.stringify({id,to_wallet_id:toWalletId,to_address:toAddress,to_username:toUsername??'',amount,memo:memo??'',created_at:Date.now(),paid_tx_hash:null})})
+      return j({id,url:`/pay/${id}`})
     }
-
-    if (req.method === 'GET') {
-      const id = url.pathname.split('/').pop()
-      if (!id) return err('id required')
-      const { data } = await sb.from('pay_links').select('*').eq('id', id).single()
-      if (!data) return err('Not found', 404)
-      return json({
-        id: data.id, toWalletId: data.to_wallet_id, toAddress: data.to_address,
-        toUsername: data.to_username, amount: data.amount, memo: data.memo,
-        createdAt: data.created_at, paidTxHash: data.paid_tx_hash,
-      })
+    if(req.method==='GET'){
+      const id=url.pathname.split('/').pop()
+      if(!id)return e('id required')
+      const r=await fetch(`${SB_URL}/rest/v1/pay_links?id=eq.${encodeURIComponent(id)}&limit=1`,{headers:h})
+      const rows=await r.json() as Record<string,unknown>[]
+      if(!rows[0])return e('Not found',404)
+      const d=rows[0]
+      return j({id:d.id,toWalletId:d.to_wallet_id,toAddress:d.to_address,toUsername:d.to_username,amount:d.amount,memo:d.memo,createdAt:d.created_at,paidTxHash:d.paid_tx_hash})
     }
-
-    return err('Method not allowed', 405)
-  } catch (e) { return err(e instanceof Error ? e.message : 'Failed', 500) }
+    return e('Method not allowed',405)
+  }catch(err2){return e(err2 instanceof Error?err2.message:'Failed',500)}
 })
