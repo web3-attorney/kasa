@@ -449,7 +449,7 @@ app.post('/api/auth/send-otp', emailLimiter, async (req, res) => {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: 'Kasa <onboarding@resend.dev>', to: [email], subject: 'Your Kasa sign-in code', html: `<p style="font-family:sans-serif;font-size:16px">Your Kasa code:</p><p style="font-family:monospace;font-size:36px;font-weight:bold;letter-spacing:10px;color:#000">${code}</p><p style="color:#888;font-size:13px">Expires in 10 min.</p>` }),
+      body: JSON.stringify({ from: 'Kasa <noreply@mail.rovapay.xyz>', to: [email], subject: 'Your Kasa sign-in code', html: `<p style="font-family:sans-serif;font-size:16px">Your Kasa code:</p><p style="font-family:monospace;font-size:36px;font-weight:bold;letter-spacing:10px;color:#000">${code}</p><p style="color:#888;font-size:13px">Expires in 10 min.</p>` }),
     })
     if (!r.ok) throw new Error(`Resend: ${await r.text()}`)
     res.json({ ok: true })
@@ -695,7 +695,7 @@ app.post('/api/limits/send-confirm', emailLimiter, async (req, res) => {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: 'Kasa <onboarding@resend.dev>', to: [email], subject: 'Kasa spending confirmation', html: `<p style="font-family:sans-serif">Confirm sending $${pending.amount} USDC:</p><p style="font-family:monospace;font-size:36px;font-weight:bold;letter-spacing:10px">${pending.code}</p>` }),
+      body: JSON.stringify({ from: 'Kasa <noreply@mail.rovapay.xyz>', to: [email], subject: 'Kasa spending confirmation', html: `<p style="font-family:sans-serif">Confirm sending $${pending.amount} USDC:</p><p style="font-family:monospace;font-size:36px;font-weight:bold;letter-spacing:10px">${pending.code}</p>` }),
     })
     if (!r.ok) throw new Error(`Resend: ${await r.text()}`)
     res.json({ ok: true })
