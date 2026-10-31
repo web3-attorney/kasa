@@ -15,6 +15,24 @@ async function encryptEntitySecret(entitySecret:string,publicKeyPem:string):Prom
   return btoa(Array.from(new Uint8Array(encrypted),b=>String.fromCodePoint(b)).join(''))
 }
 
+async function waitForTxHash(txId:string,apiKey:string,timeoutMs=30000):Promise<string|null>{
+  const deadline=Date.now()+timeoutMs
+  while(Date.now()<deadline){
+    await new Promise(r=>setTimeout(r,2000))
+    try{
+      const r=await fetch(`https://api.circle.com/v1/w3s/transactions/${txId}`,{
+        headers:{'Authorization':`Bearer ${apiKey}`}
+      })
+      const d=await r.json() as{data?:{transaction?:{state:string;txHash?:string}}}
+      const tx=d.data?.transaction
+      if(!tx) continue
+      if(tx.txHash) return tx.txHash
+      if(tx.state==='FAILED'||tx.state==='CANCELLED'||tx.state==='DENIED') return null
+    }catch{ continue }
+  }
+  return null
+}
+
 Deno.serve(async(req)=>{
   if(req.method==='OPTIONS')return new Response(null,{status:204,headers:CORS})
   try{
@@ -47,15 +65,18 @@ Deno.serve(async(req)=>{
     const txData=await txRes.json() as{data?:{id:string};code?:number;message?:string;errors?:unknown[]}
     if(!txData.data?.id) return j({error:txData.message??'No txId',detail:txData},400)
 
-    // Return txId immediately — frontend polls /tx-status for completion
     const txId=txData.data.id
-
-    // Record as pending in Supabase
     const SB_URL=Deno.env.get('SUPABASE_URL')!,SB_KEY=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    await fetch(`${SB_URL}/rest/v1/tx_history`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
-      body:JSON.stringify({wallet_id:walletId,tx_hash:txId,direction:'out',amount,counterparty:toAddress,memo:memo??'',timestamp:Date.now()})})
 
-    return j({txId,pending:true})
+    // Poll for real onchain hash (Arc finalises in ~1s so this usually resolves in 2-4s)
+    const txHash=await waitForTxHash(txId,apiKey,30000)
+
+    // Record in Supabase with real hash (or txId as fallback)
+    const hashToStore=txHash??txId
+    await fetch(`${SB_URL}/rest/v1/tx_history`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify({wallet_id:walletId,tx_hash:hashToStore,direction:'out',amount,counterparty:toAddress,memo:memo??'',timestamp:Date.now()})})
+
+    return j({txId,txHash:txHash??undefined,pending:!txHash})
   }catch(err){
     return j({error:err instanceof Error?err.message:'Server error'},500)
   }
