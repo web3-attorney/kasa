@@ -1,11 +1,11 @@
 /**
- * NotificationBell — connects to the SSE stream and shows real-time
- * toast notifications for every transaction. Also shows a bell icon
- * with an unread count badge.
+ * NotificationBell — polls tx-history every 10s for new transactions
+ * and shows toast notifications. Works on any hosting (no SSE needed).
  */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { Bell, ArrowDownLeft, ArrowUpRight, Repeat2, Zap, Clock } from 'lucide-react'
 import { toast } from 'sonner'
+import { apiFetch } from '@/kasaWallet'
 
 interface TxRecord {
   txHash: string
@@ -48,27 +48,38 @@ function txColor(dir: TxRecord['direction']): string {
 }
 
 export default function NotificationBell({ walletId, onNewTx }: Props) {
-  const [unread, setUnread] = useState(0)
-  const [open, setOpen]     = useState(false)
-  const [log, setLog]       = useState<TxRecord[]>([])
-  const esRef               = useRef<EventSource | null>(null)
+  const [unread, setUnread]   = useState(0)
+  const [open, setOpen]       = useState(false)
+  const [log, setLog]         = useState<TxRecord[]>([])
+  const seenRef               = useRef<Set<string>>(new Set())
+  const initializedRef        = useRef(false)
 
-  useEffect(() => {
+  const poll = useCallback(async () => {
     if (!walletId) return
-    const token = sessionStorage.getItem('kasa_token') ?? ''
-    const es = new EventSource(`/api/notifications/stream?walletId=${walletId}&token=${encodeURIComponent(token)}`)
-    esRef.current = es
+    try {
+      const res = await apiFetch(`/api/tx-history?walletId=${walletId}`)
+      if (!res.ok) return
+      const data = await res.json() as TxRecord[]
+      if (!Array.isArray(data)) return
 
-    es.onmessage = (e) => {
-      try {
-        const msg = JSON.parse(e.data as string) as { type: string; tx: TxRecord }
-        if (msg.type !== 'tx') return
-        const tx = msg.tx
-        setLog(prev => [tx, ...prev].slice(0, 50))
-        setUnread(n => n + 1)
+      const sorted = data.slice().sort((a, b) => b.timestamp - a.timestamp).slice(0, 50)
+
+      if (!initializedRef.current) {
+        // First load — seed seenRef, show no toasts
+        sorted.forEach(tx => seenRef.current.add(tx.txHash))
+        setLog(sorted)
+        initializedRef.current = true
+        return
+      }
+
+      // Find genuinely new transactions
+      const newTxs = sorted.filter(tx => !seenRef.current.has(tx.txHash))
+      if (newTxs.length === 0) return
+
+      newTxs.forEach(tx => {
+        seenRef.current.add(tx.txHash)
         onNewTx?.(tx)
 
-        // Show toast
         const label = txLabel(tx)
         const color = txColor(tx.direction)
         const prefix = tx.direction === 'in' || tx.direction === 'fx' ? '+' : (tx.direction === 'save' ? '→ saved ' : '-')
@@ -95,11 +106,19 @@ export default function NotificationBell({ walletId, onNewTx }: Props) {
             </div>
           </div>
         ), { duration: 5000 })
-      } catch { /* ignore parse errors */ }
-    }
+      })
 
-    return () => { es.close(); esRef.current = null }
+      setLog(sorted)
+      setUnread(n => n + newTxs.length)
+    } catch { /* ignore poll errors */ }
   }, [walletId, onNewTx])
+
+  useEffect(() => {
+    if (!walletId) return
+    const first = setTimeout(() => { void poll() }, 0)
+    const id = setInterval(() => { void poll() }, 10_000)
+    return () => { clearTimeout(first); clearInterval(id) }
+  }, [walletId, poll])
 
   if (!walletId) return null
 
@@ -118,7 +137,7 @@ export default function NotificationBell({ walletId, onNewTx }: Props) {
         {unread > 0 && (
           <span style={{
             position: 'absolute', top: -4, right: -4,
-            background: 'var(--acc)', color: 'var(--accent-fg)',
+            background: 'var(--acc)', color: '#fff',
             fontSize: 9, fontWeight: 800, lineHeight: 1,
             width: 16, height: 16, borderRadius: '50%',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -130,17 +149,13 @@ export default function NotificationBell({ walletId, onNewTx }: Props) {
 
       {open && (
         <>
-          {/* backdrop */}
-          <div
-            onClick={() => setOpen(false)}
-            style={{ position: 'fixed', inset: 0, zIndex: 99 }}
-          />
+          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 99 }} />
           <div style={{
             position: 'absolute', top: 44, right: 0, zIndex: 100,
             width: 300, maxHeight: 400, overflowY: 'auto',
-            background: '#141416', border: '1px solid var(--border)',
+            background: 'var(--surface)', border: '1px solid var(--border)',
             borderRadius: 16, padding: '12px 0',
-            boxShadow: '0 16px 48px rgba(0,0,0,.6)',
+            boxShadow: '0 16px 48px rgba(0,0,0,.4)',
           }}>
             <p style={{ margin: '0 14px 10px', fontSize: 11, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t3)' }}>
               Recent activity
@@ -151,10 +166,10 @@ export default function NotificationBell({ walletId, onNewTx }: Props) {
               </p>
             )}
             {log.map((tx, i) => (
-              <div key={tx.txHash + i} style={{
+              <div key={tx.txHash + String(i)} style={{
                 display: 'flex', alignItems: 'center', gap: 10,
                 padding: '9px 14px',
-                borderBottom: i < log.length - 1 ? '1px solid rgba(255,255,255,.05)' : 'none',
+                borderBottom: i < log.length - 1 ? '1px solid var(--border)' : 'none',
               }}>
                 <div style={{
                   width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
@@ -165,7 +180,7 @@ export default function NotificationBell({ walletId, onNewTx }: Props) {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: 'var(--t1)' }}>{txLabel(tx)}</p>
-                  <p style={{ margin: '1px 0 0', fontSize: 11, color: 'rgba(255,255,255,.35)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <p style={{ margin: '1px 0 0', fontSize: 11, color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     <span style={{ color: txColor(tx.direction) }}>{tx.amount} USDC</span>
                     {tx.memo ? ` · ${tx.memo}` : ''}
                   </p>

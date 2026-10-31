@@ -1,45 +1,35 @@
-const CORS={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type','Access-Control-Allow-Methods':'GET, POST, PUT, DELETE, OPTIONS'}
-const j=(d:unknown,s=200)=>new Response(JSON.stringify(d),{status:s,headers:{...CORS,'Content-Type':'application/json'}})
-const e=(m:string,s=400)=>j({error:m},s)
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
+}
+const j = (d: unknown, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { ...CORS, 'Content-Type': 'application/json' } })
+const e = (m: string, s = 400) => j({ error: m }, s)
 
-// Encrypt entity secret with Circle's RSA-OAEP public key (Web Crypto API)
-async function encryptEntitySecret(entitySecret: string, publicKeyPem: string): Promise<string> {
-  // Decode PEM to ArrayBuffer
-  const pem = publicKeyPem.replace(/-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----|\n/g, '')
-  const keyBytes = Uint8Array.from(atob(pem), c => c.charCodeAt(0))
-  // Import public key
-  const publicKey = await crypto.subtle.importKey(
-    'spki', keyBytes.buffer,
-    { name: 'RSA-OAEP', hash: 'SHA-256' },
-    false, ['encrypt']
-  )
-  // Encrypt the entity secret (hex string → bytes)
-  const secretBytes = new Uint8Array(entitySecret.match(/.{2}/g)!.map(h => parseInt(h, 16)))
-  const encrypted = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, publicKey, secretBytes)
-  return btoa(Array.from(new Uint8Array(encrypted),b=>String.fromCodePoint(b)).join(''))
+// RSA-OAEP SHA-256 encryption matching Circle SDK exactly
+async function encrypt(entitySecret: string, publicKeyPem: string): Promise<string> {
+  const pem = publicKeyPem.replace(/-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----|\s+/g, '')
+  const t = atob(pem)
+  const kb = new Uint8Array(t.length)
+  for (let i = 0; i < t.length; i++) kb[i] = t.codePointAt(i) as number
+  const key = await crypto.subtle.importKey('spki', kb.buffer, { name: 'RSA-OAEP', hash: 'SHA-256' }, false, ['encrypt'])
+  const hex = entitySecret.trim().replace(/\s+/g, '')
+  const sb = new Uint8Array(hex.length / 2)
+  for (let i = 0; i < hex.length; i += 2) sb[i / 2] = parseInt(hex.slice(i, i + 2), 16)
+  const enc = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, key, sb)
+  return btoa(Array.from(new Uint8Array(enc), b => String.fromCodePoint(b)).join(''))
 }
 
-async function circleReq(method: string, path: string, body?: unknown) {
-  const apiKey = Deno.env.get('CIRCLE_API_KEY')!
-  const entitySecret = Deno.env.get('CIRCLE_ENTITY_SECRET')!
-  // Get Circle's public key
-  const pkRes = await fetch('https://api.circle.com/v1/w3s/config/entity/publicKey', {
-    headers: { 'Authorization': `Bearer ${apiKey}` }
-  })
-  const pkData = await pkRes.json() as { data: { publicKey: string } }
-  const ciphertext = await encryptEntitySecret(entitySecret, pkData.data.publicKey)
-  const r = await fetch(`https://api.circle.com/v1${path}`, {
-    method,
-    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: body ? JSON.stringify({ ...body as object, entitySecretCiphertext: ciphertext }) : undefined,
-  })
+async function circleGet(apiKey: string, path: string) {
+  const r = await fetch(`https://api.circle.com/v1${path}`, { headers: { 'Authorization': `Bearer ${apiKey}` } })
   return r.json()
 }
 
-async function circleGet(path: string) {
-  const apiKey = Deno.env.get('CIRCLE_API_KEY')!
+async function circlePost(apiKey: string, cipher: string, path: string, body: Record<string, unknown>) {
   const r = await fetch(`https://api.circle.com/v1${path}`, {
-    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' }
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...body, entitySecretCiphertext: cipher })
   })
   return r.json()
 }
@@ -49,6 +39,9 @@ Deno.serve(async (req) => {
   try {
     const { userId, username: requestedUsername } = await req.json() as { userId?: string; username?: string }
     if (!userId) return e('userId required')
+
+    const apiKey = Deno.env.get('CIRCLE_API_KEY')!
+    const entitySecret = Deno.env.get('CIRCLE_ENTITY_SECRET')!
     const SB_URL = Deno.env.get('SUPABASE_URL')!
     const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const sbH = { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Accept': 'application/json', 'Content-Type': 'application/json' }
@@ -59,36 +52,39 @@ Deno.serve(async (req) => {
     const finalUsername = (existingProfile?.username as string) ?? requestedUsername
     if (!finalUsername) return e('username required for new users')
 
-    // Get or create wallet set
-    const wsRes = await circleGet('/w3s/walletSets?pageSize=1')
+    // Get Circle public key + cipher once
+    const pkData = await circleGet(apiKey, '/w3s/config/entity/publicKey') as { data: { publicKey: string } }
+    const cipher = await encrypt(entitySecret, pkData.data.publicKey)
+
+    // Get or create wallet set (uses /w3s/walletSets — no /developer/)
+    const wsRes = await circleGet(apiKey, '/w3s/walletSets?pageSize=1') as { data?: { walletSets?: Array<{ id: string }> } }
     let wsId = wsRes.data?.walletSets?.[0]?.id
     if (!wsId) {
-      const cr = await circleReq('POST', '/w3s/walletSets', { name: 'Kasa Users', idempotencyKey: crypto.randomUUID() })
+      const cr = await circlePost(apiKey, cipher, '/w3s/walletSets', { name: 'Kasa Users', idempotencyKey: crypto.randomUUID() }) as { data?: { walletSet?: { id: string } } }
       wsId = cr.data?.walletSet?.id
     }
-    if (!wsId) return e('Wallet set error')
+    if (!wsId) return e('Wallet set unavailable')
 
     // Find existing wallet by refId
-    const wlRes = await circleGet(`/w3s/wallets?walletSetId=${wsId}&pageSize=50`)
-    const wallets = (wlRes.data?.wallets ?? []) as Record<string, unknown>[]
+    const wlRes = await circleGet(apiKey, `/w3s/wallets?walletSetId=${wsId}&pageSize=50`) as { data?: { wallets?: Array<Record<string, unknown>> } }
+    const wallets = wlRes.data?.wallets ?? []
     let wallet = wallets.find(w => w.refId === userId)
-    let isNew = false
 
     if (!wallet) {
-      const cr = await circleReq('POST', '/w3s/wallets', {
+      // Create wallet — uses /w3s/developer/wallets
+      const cr = await circlePost(apiKey, cipher, '/w3s/developer/wallets', {
         accountType: 'EOA',
         blockchains: ['ARC-TESTNET'],
         count: 1,
         walletSetId: wsId,
         metadata: [{ name: `Kasa:${userId}`, refId: userId }],
         idempotencyKey: crypto.randomUUID(),
-      })
+      }) as { data?: { wallets?: Array<Record<string, unknown>> }; message?: string; code?: number }
       wallet = cr.data?.wallets?.[0]
-      isNew = true
+      if (!wallet) return e(`Wallet creation failed: ${cr.message ?? 'unknown'}`)
     }
-    if (!wallet) return e('Wallet creation failed')
 
-    // Save profile if new
+    // Save profile
     if (!existingProfile) {
       await fetch(`${SB_URL}/rest/v1/profiles`, {
         method: 'POST',
@@ -97,9 +93,10 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Simple signed token
     const payload = btoa(JSON.stringify({ userId, walletId: wallet.id, exp: Math.floor(Date.now() / 1000) + 2592000 }))
     const token = `kasa.${payload}.sig`
-    return j({ walletId: wallet.id, address: wallet.address, username: finalUsername, token, isNew })
-  } catch (err2) { return e(err2 instanceof Error ? err2.message : 'Server error', 500) }
+    return j({ walletId: wallet.id, address: wallet.address, username: finalUsername, token, isNew: !existingProfile })
+  } catch (err2) {
+    return e(err2 instanceof Error ? err2.message : 'Server error', 500)
+  }
 })

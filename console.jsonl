@@ -1428,3 +1428,6 @@
 {"level":"debug","message":"[vite] hot updated: /src/components/TransactionHistory.tsx","timestamp":1793425339223}
 {"level":"debug","message":"[vite] hot updated: /src/components/InternalSend.tsx","timestamp":1793425339223}
 {"level":"debug","message":"[vite] hot updated: /src/components/AutoSave.tsx","timestamp":1793425339223}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793425600315}
+{"level":"debug","message":"[vite] connected.","timestamp":1793425672821}
+{"level":"debug","message":"[vite] connected.","timestamp":1793425879763}
