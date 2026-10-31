@@ -1556,3 +1556,72 @@
 {"level":"debug","message":"[vite] hot updated: /src/components/PaymentRequest.tsx","timestamp":1793427606759}
 {"level":"debug","message":"[vite] hot updated: /src/components/ScheduledPayments.tsx","timestamp":1793427606759}
 {"level":"debug","message":"[vite] hot updated: /src/components/AutoSave.tsx","timestamp":1793427606759}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793427839953}
+{"level":"debug","message":"[vite] connected.","timestamp":1793427846304}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793428170522}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793428170523}
+{"level":"debug","message":"[vite] connected.","timestamp":1793428177162}
+{"level":"debug","message":"[vite] connected.","timestamp":1793428178314}
+{"level":"debug","message":"[vite] connected.","timestamp":1793428219852}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793428222623}
+{"level":"debug","message":"[vite] hot updated: /src/App.tsx","timestamp":1793428222625}
+{"level":"debug","message":"[vite] hot updated: /src/components/TransactionHistory.tsx","timestamp":1793428222625}
+{"level":"debug","message":"[vite] hot updated: /src/components/NotificationBell.tsx","timestamp":1793428222626}
+{"level":"debug","message":"[vite] hot updated: /src/components/SpendingLimits.tsx","timestamp":1793428222626}
+{"level":"debug","message":"[vite] hot updated: /src/components/AuthScreen.tsx","timestamp":1793428222628}
+{"level":"debug","message":"[vite] hot updated: /src/components/ScheduledPayments.tsx","timestamp":1793428222628}
+{"level":"debug","message":"[vite] hot updated: /src/components/Contacts.tsx","timestamp":1793428222629}
+{"level":"debug","message":"[vite] hot updated: /src/components/FxRouter.tsx","timestamp":1793428222631}
+{"level":"debug","message":"[vite] hot updated: /src/components/InternalSend.tsx","timestamp":1793428222631}
+{"level":"debug","message":"[vite] hot updated: /src/components/PaymentRequest.tsx","timestamp":1793428222632}
+{"level":"debug","message":"[vite] hot updated: /src/components/AutoSave.tsx","timestamp":1793428222632}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793428222933}
+{"level":"debug","message":"[vite] hot updated: /src/components/ScheduledPayments.tsx","timestamp":1793428222933}
+{"level":"debug","message":"[vite] hot updated: /src/components/Contacts.tsx","timestamp":1793428222933}
+{"level":"debug","message":"[vite] hot updated: /src/components/FxRouter.tsx","timestamp":1793428222933}
+{"level":"debug","message":"[vite] hot updated: /src/components/InternalSend.tsx","timestamp":1793428222933}
+{"level":"debug","message":"[vite] hot updated: /src/components/AutoSave.tsx","timestamp":1793428222934}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793428225128}
+{"level":"debug","message":"[vite] hot updated: /src/App.tsx","timestamp":1793428225128}
+{"level":"debug","message":"[vite] hot updated: /src/components/TransactionHistory.tsx","timestamp":1793428225128}
+{"level":"debug","message":"[vite] hot updated: /src/components/NotificationBell.tsx","timestamp":1793428225128}
+{"level":"debug","message":"[vite] hot updated: /src/components/SpendingLimits.tsx","timestamp":1793428225128}
+{"level":"debug","message":"[vite] hot updated: /src/components/AuthScreen.tsx","timestamp":1793428225129}
+{"level":"debug","message":"[vite] hot updated: /src/components/ScheduledPayments.tsx","timestamp":1793428225129}
+{"level":"debug","message":"[vite] hot updated: /src/components/Contacts.tsx","timestamp":1793428225129}
+{"level":"debug","message":"[vite] hot updated: /src/components/FxRouter.tsx","timestamp":1793428225129}
+{"level":"debug","message":"[vite] hot updated: /src/components/InternalSend.tsx","timestamp":1793428225129}
+{"level":"debug","message":"[vite] hot updated: /src/components/PaymentRequest.tsx","timestamp":1793428225129}
+{"level":"debug","message":"[vite] hot updated: /src/components/AutoSave.tsx","timestamp":1793428225129}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793428225335}
+{"level":"debug","message":"[vite] hot updated: /src/App.tsx","timestamp":1793428225336}
+{"level":"debug","message":"[vite] hot updated: /src/components/TransactionHistory.tsx","timestamp":1793428225336}
+{"level":"debug","message":"[vite] hot updated: /src/components/NotificationBell.tsx","timestamp":1793428225336}
+{"level":"debug","message":"[vite] hot updated: /src/components/SpendingLimits.tsx","timestamp":1793428225336}
+{"level":"debug","message":"[vite] hot updated: /src/components/AuthScreen.tsx","timestamp":1793428225336}
+{"level":"debug","message":"[vite] hot updated: /src/components/ScheduledPayments.tsx","timestamp":1793428225336}
+{"level":"debug","message":"[vite] hot updated: /src/components/Contacts.tsx","timestamp":1793428225336}
+{"level":"debug","message":"[vite] hot updated: /src/components/FxRouter.tsx","timestamp":1793428225336}
+{"level":"debug","message":"[vite] hot updated: /src/components/InternalSend.tsx","timestamp":1793428225336}
+{"level":"debug","message":"[vite] hot updated: /src/components/PaymentRequest.tsx","timestamp":1793428225337}
+{"level":"debug","message":"[vite] hot updated: /src/components/AutoSave.tsx","timestamp":1793428225337}
+{"level":"debug","message":"[vite] hot updated: /src/components/NotificationBell.tsx","timestamp":1793428229380}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793428229380}
+{"level":"debug","message":"[vite] hot updated: /src/components/NotificationBell.tsx","timestamp":1793428229381}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793428229381}
+{"level":"debug","message":"[vite] hot updated: /src/components/NotificationBell.tsx","timestamp":1793428231550}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793428231550}
+{"level":"debug","message":"[vite] hot updated: /src/components/NotificationBell.tsx","timestamp":1793428231586}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793428231586}
+{"level":"debug","message":"[vite] hot updated: /src/components/NotificationBell.tsx","timestamp":1793428233384}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793428233385}
+{"level":"debug","message":"[vite] hot updated: /src/components/NotificationBell.tsx","timestamp":1793428233385}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793428233385}
+{"level":"debug","message":"[vite] hot updated: /src/components/NotificationBell.tsx","timestamp":1793428237320}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793428237321}
+{"level":"debug","message":"[vite] hot updated: /src/components/NotificationBell.tsx","timestamp":1793428237321}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793428237321}
+{"level":"debug","message":"[vite] hot updated: /src/App.tsx","timestamp":1793428241117}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793428241117}
+{"level":"debug","message":"[vite] hot updated: /src/App.tsx","timestamp":1793428241117}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793428241117}

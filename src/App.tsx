@@ -247,7 +247,7 @@ export default function App() {
           <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--t1)', letterSpacing: '-.02em' }}>Kasa</div>
           <div style={{ fontSize: '11px', color: 'var(--t3)' }}>@{session.username}</div>
         </div>
-        <NotificationBell walletId={session.walletId} onNewTx={handleNewTx} />
+        <NotificationBell walletId={session.walletId} walletAddress={session.address} onNewTx={handleNewTx} />
 
         <button onClick={handleSignOut}
           style={{ display: 'flex', alignItems: 'center', gap: '4px', height: '28px', padding: '0 10px', borderRadius: '8px', background: 'rgba(255,255,255,.6)', border: '1px solid var(--border)', color: 'var(--t2)', fontSize: '11px', cursor: 'pointer' }}>

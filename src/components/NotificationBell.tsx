@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Bell, ArrowDownLeft, ArrowUpRight, Repeat2, Zap, Clock } from 'lucide-react'
 import { toast } from 'sonner'
-import { apiFetch } from '@/kasaWallet'
+import { apiFetch, triggerInboundWatch } from '@/kasaWallet'
 
 interface TxRecord {
   txHash: string
@@ -19,6 +19,7 @@ interface TxRecord {
 
 interface Props {
   walletId?: string
+  walletAddress?: string
   onNewTx?: (tx: TxRecord) => void
 }
 
@@ -47,16 +48,25 @@ function txColor(dir: TxRecord['direction']): string {
   return '#f87171'
 }
 
-export default function NotificationBell({ walletId, onNewTx }: Props) {
+export default function NotificationBell({ walletId, walletAddress, onNewTx }: Props) {
   const [unread, setUnread]   = useState(0)
   const [open, setOpen]       = useState(false)
   const [log, setLog]         = useState<TxRecord[]>([])
   const seenRef               = useRef<Set<string>>(new Set())
   const initializedRef        = useRef(false)
 
+  // Counter to throttle inbound-watcher calls (every 3rd poll = every 30s)
+  const pollCountRef = useRef(0)
+
   const poll = useCallback(async () => {
     if (!walletId) return
     try {
+      // Every 3rd poll, sync inbound transfers from Circle into tx_history
+      pollCountRef.current++
+      if (walletAddress && pollCountRef.current % 3 === 1) {
+        triggerInboundWatch(walletId, walletAddress).catch(() => { /* non-fatal */ })
+      }
+
       const res = await apiFetch(`/api/tx-history?walletId=${walletId}`)
       if (!res.ok) return
       const data = await res.json() as TxRecord[]

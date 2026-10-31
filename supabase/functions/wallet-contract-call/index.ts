@@ -14,6 +14,21 @@ async function encryptEntitySecret(entitySecret:string,publicKeyPem:string):Prom
   return btoa(Array.from(new Uint8Array(encrypted),b=>String.fromCodePoint(b)).join(''))
 }
 
+// Derive tx record fields from the contract function signature
+function txMeta(sig:string, params:string[], contractAddress:string, savingsAddr:string):{direction:'out'|'save';label:string;counterparty:string;amount:string}|null {
+  const fn = sig.split('(')[0].toLowerCase()
+  if (fn === 'deposit') {
+    // deposit(uint256 amount, uint256 duration) — amount is params[0] in raw units (6 dec)
+    const raw = params[0] ? (Number(params[0]) / 1e6).toFixed(2) : '?'
+    return { direction: 'save', label: 'Auto-Save Deposit', counterparty: savingsAddr || contractAddress, amount: raw }
+  }
+  if (fn === 'withdraw') {
+    return { direction: 'save', label: 'Savings Withdrawal', counterparty: savingsAddr || contractAddress, amount: '?' }
+  }
+  // approve, commit, register, etc — no record needed
+  return null
+}
+
 Deno.serve(async(req)=>{
   if(req.method==='OPTIONS')return new Response(null,{status:204,headers:CORS})
   try{
@@ -22,6 +37,9 @@ Deno.serve(async(req)=>{
 
     const apiKey=Deno.env.get('CIRCLE_API_KEY')!
     const entitySecret=Deno.env.get('CIRCLE_ENTITY_SECRET')!
+    const SB_URL=Deno.env.get('SUPABASE_URL')!
+    const SB_KEY=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const SAVINGS=Deno.env.get('VITE_SAVINGS_ADDRESS') ?? ''
 
     const pkRes=await fetch('https://api.circle.com/v1/w3s/config/entity/publicKey',{headers:{'Authorization':`Bearer ${apiKey}`}})
     const pkData=await pkRes.json() as{data?:{publicKey:string}}
@@ -45,8 +63,20 @@ Deno.serve(async(req)=>{
     const txData=await txRes.json() as{data?:{id:string};message?:string;errors?:unknown[]}
     if(!txData.data?.id) return j({error:txData.message??'No txId',detail:txData},400)
 
+    const txId = txData.data.id
+
+    // Write tx_history record for save/withdraw actions
+    const meta = txMeta(abiFunctionSignature, abiParameters ?? [], contractAddress, SAVINGS)
+    if (meta) {
+      await fetch(`${SB_URL}/rest/v1/tx_history`, {
+        method: 'POST',
+        headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify({ wallet_id: walletId, tx_hash: txId, direction: meta.direction, amount: meta.amount, counterparty: meta.counterparty, memo: '', label: meta.label, timestamp: Date.now() })
+      })
+    }
+
     // Return immediately — frontend polls /tx-status
-    return j({txId:txData.data.id,pending:true})
+    return j({txId,pending:true})
   }catch(err){
     return j({error:err instanceof Error?err.message:'Server error'},500)
   }

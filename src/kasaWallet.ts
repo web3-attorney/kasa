@@ -68,6 +68,7 @@ const ROUTE_MAP: Record<string, string> = {
   '/api/limits/verify-confirm':  'limits',
   '/api/tx-status':              'tx-status',
   '/api/registry/register':     'register-username',
+  '/api/inbound-watcher':       'inbound-watcher',
 }
 
 export function apiUrl(path: string): string {
@@ -145,6 +146,16 @@ export async function sendUsdc(walletId: string, toAddress: string, amountRaw: b
   // If pending (production), poll for completion
   if (data.pending && data.txId) return pollUntilComplete(data.txId)
   return data.txHash ?? data.txId ?? ''
+}
+
+// ── Inbound transfer watcher (call on login + periodically) ──────────────────
+
+export function triggerInboundWatch(walletId: string, walletAddress: string): Promise<{ found: number; new: number }> {
+  return fetch(apiUrl('/api/inbound-watcher'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ walletId, walletAddress }),
+  }).then(r => r.json() as Promise<{ found: number; new: number }>).catch(() => ({ found: 0, new: 0 }))
 }
 
 // ── Username registration (fire and forget after login) ───────────────────────

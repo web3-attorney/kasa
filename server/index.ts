@@ -575,6 +575,11 @@ app.get('/api/registry/lookup', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e instanceof Error ? e.message : 'Lookup failed' }) }
 })
 
+app.post('/api/inbound-watcher', (_req, res) => {
+  // In dev, the local balance watcher already writes inbound records
+  res.json({ found: 0, new: 0, dev: true })
+})
+
 app.post('/api/registry/register', async (req, res) => {
   // In dev/local mode, the commit-reveal is handled server-side already in wallet-get-or-create
   // Just proxy to the Edge Function or return ok:true with already:true for dev
