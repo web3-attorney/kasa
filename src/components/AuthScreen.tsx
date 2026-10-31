@@ -227,7 +227,7 @@ export default function AuthScreen({ onAuth }: Props) {
       </div>
 
       <p style={{ marginTop: '24px', fontSize: '12px', color: 'rgba(255,255,255,.2)' }}>
-        Arc Testnet · Funds have no real-world value
+        Arc · USDC powered
       </p>
     </div>
   )

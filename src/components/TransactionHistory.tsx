@@ -7,6 +7,7 @@ import { ArrowUpRight, ArrowDownLeft, ExternalLink, Clock, RefreshCw, Zap, Repea
 import { buildTxExplorerUrl } from '@/onchain-facts'
 import { apiFetch } from '@/kasaWallet'
 import { toast } from 'sonner'
+import { ARC_CHAIN_ID } from '@/chain'
 
 interface TxRecord {
   txHash: string
@@ -147,7 +148,7 @@ export default function TransactionHistory({ walletId, refreshKey }: Props) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end', marginTop: '3px' }}>
                   <span style={{ fontSize: '10px', color: 'var(--t3)' }}>{timeAgo(tx.timestamp)}</span>
                   {explorable && (
-                    <a href={buildTxExplorerUrl(5042002, tx.txHash)} target="_blank" rel="noopener noreferrer"
+                    <a href={buildTxExplorerUrl(ARC_CHAIN_ID, tx.txHash)} target="_blank" rel="noopener noreferrer"
                       style={{ color: 'var(--t3)', display: 'flex', alignItems: 'center' }}>
                       <ExternalLink style={{ width: '10px', height: '10px' }} />
                     </a>

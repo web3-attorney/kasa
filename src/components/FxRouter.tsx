@@ -7,12 +7,17 @@ import { ArrowLeftRight, Loader2, CheckCircle2, Info, ExternalLink } from 'lucid
 import { getUsdc, requireChain, buildTxExplorerUrl } from '@/onchain-facts'
 import { Amount, parseAmount } from '@/onchain-money'
 import { sendUsdc } from '@/kasaWallet'
-import { arcTestnet } from 'viem/chains'
+import { ARC_CHAIN_ID, arcChain as arcChainDef } from '@/chain'
 import { toast } from 'sonner'
 
-const ARC_TESTNET_ID = 5042002
-const USDC = getUsdc(ARC_TESTNET_ID)!
-const EURC = { symbol: 'EURC', address: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a', decimals: 6 }
+const USDC = getUsdc(ARC_CHAIN_ID)!
+const EURC = {
+  symbol: 'EURC',
+  address: ARC_CHAIN_ID === 5042
+    ? '0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1'
+    : '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a',
+  decimals: 6,
+}
 type Token = typeof USDC | typeof EURC
 const TOKENS: Token[] = [USDC, EURC]
 
@@ -21,10 +26,10 @@ const FX_RATES: Record<string, Record<string, number>> = {
   EURC: { EURC: 1.0, USDC: 1.082 },
 }
 
-const arcChain = requireChain(ARC_TESTNET_ID)
+const arcChainInfo = requireChain(ARC_CHAIN_ID)
 const publicClient = createPublicClient({
-  chain: { ...arcTestnet, contracts: {} },
-  transport: http(arcChain.rpcUrls[0], { timeout: 8000 }),
+  chain: { ...arcChainDef, contracts: {} },
+  transport: http(arcChainInfo.rpcUrls[0], { timeout: 8000 }),
 })
 
 interface Props { walletId?: string; walletAddress?: string }
@@ -61,7 +66,7 @@ export default function FxRouter({ walletId, walletAddress }: Props) {
     if (!canSend || !walletId) return
     setSending(true)
     try {
-      const parsed = parseAmount(ARC_TESTNET_ID, amount)
+      const parsed = parseAmount(ARC_CHAIN_ID, amount)
       const hash = await sendUsdc(walletId, to, parsed.raw)
       setTxHash(hash)
       toast.success(`Payment routed — ${amount} ${sendToken.symbol} sent!`)
@@ -101,7 +106,7 @@ export default function FxRouter({ walletId, walletAddress }: Props) {
             {amount} {sendToken.symbol} → {receiveAmount} {receiveToken.symbol}
           </p>
         </div>
-        <a href={buildTxExplorerUrl(ARC_TESTNET_ID, txHash)} target="_blank" rel="noopener noreferrer"
+        <a href={buildTxExplorerUrl(ARC_CHAIN_ID, txHash)} target="_blank" rel="noopener noreferrer"
           style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--t3)', textDecoration: 'none' }}>
           <ExternalLink style={{ width: '12px', height: '12px' }} /> View on explorer
         </a>
@@ -121,7 +126,7 @@ export default function FxRouter({ walletId, walletAddress }: Props) {
         background: 'var(--surface-muted)', border: '1px solid var(--border)' }}>
         <Info style={{ width: '14px', height: '14px', color: 'var(--t3)', flexShrink: 0, marginTop: '1px' }} />
         <p style={{ margin: 0, fontSize: '12px', color: 'var(--t3)', lineHeight: 1.5 }}>
-          Both USDC and EURC are $1 stablecoins on Arc Testnet. The rate shown is illustrative.
+          Both USDC and EURC are $1 stablecoins on Arc. The rate shown is illustrative.
         </p>
       </div>
 

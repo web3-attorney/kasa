@@ -155,7 +155,7 @@ export default function AgentRegistration({ onRegistered }: AgentRegistrationPro
           className="w-full h-12 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {isSwitching ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-          Switch to Arc Testnet
+          Switch to Arc
         </button>
       ) : (
         <button

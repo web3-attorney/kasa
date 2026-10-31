@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
 import { AtSign, Loader2, CheckCircle2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { ARC_CHAIN_ID } from '@/chain'
 
 const REGISTRY_ADDRESS = import.meta.env.VITE_REGISTRY_ADDRESS as `0x${string}` | undefined
 
@@ -56,7 +57,7 @@ export default function UsernameSetup({ suggestedUsername, walletAddress, onComp
       abi: REGISTRY_ABI,
       functionName: 'register',
       args: [username],
-      chainId: 5042002,
+      chainId: ARC_CHAIN_ID,
     })
   }
 

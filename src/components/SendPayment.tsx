@@ -4,9 +4,9 @@ import { erc20Abi, isAddress } from 'viem'
 import { ArrowRight, Loader2, CheckCircle2, AlertCircle, ExternalLink } from 'lucide-react'
 import { getUsdc, buildTxExplorerUrl } from '@/onchain-facts'
 import { parseAmount, Amount, usdcDecimalsFor } from '@/onchain-money'
+import { ARC_CHAIN_ID } from '@/chain'
 
-const ARC_TESTNET_ID = 5042002
-const usdcFact = getUsdc(ARC_TESTNET_ID)!
+const usdcFact = getUsdc(ARC_CHAIN_ID)!
 
 const QUICK_AMOUNTS = ['1', '5', '10', '25']
 
@@ -29,31 +29,31 @@ export default function SendPayment() {
     abi: erc20Abi,
     functionName: 'balanceOf',
     args: [address ?? '0x0000000000000000000000000000000000000000'],
-    chainId: ARC_TESTNET_ID,
+    chainId: ARC_CHAIN_ID,
     query: { enabled: Boolean(address) },
   })
 
   const balance = balanceRaw !== undefined
-    ? Amount.fromRaw(balanceRaw, usdcDecimalsFor(ARC_TESTNET_ID)).toFixed(2)
+    ? Amount.fromRaw(balanceRaw, usdcDecimalsFor(ARC_CHAIN_ID)).toFixed(2)
     : '—'
 
   const { writeContract, data: txHash, isPending, error: writeError, reset } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash })
 
-  const isWrongChain = address && chainId !== ARC_TESTNET_ID
+  const isWrongChain = address && chainId !== ARC_CHAIN_ID
   const toValid = isAddress(to)
   const amountNum = parseFloat(amount)
   const amountValid = !isNaN(amountNum) && amountNum > 0
 
   const handleSend = () => {
     if (!toValid || !amountValid || !address) return
-    const parsed = parseAmount(ARC_TESTNET_ID, amount)
+    const parsed = parseAmount(ARC_CHAIN_ID, amount)
     writeContract({
       address: usdcFact.address as `0x${string}`,
       abi: erc20Abi,
       functionName: 'transfer',
       args: [to, parsed.raw],
-      chainId: ARC_TESTNET_ID,
+      chainId: ARC_CHAIN_ID,
     })
   }
 
@@ -72,7 +72,7 @@ export default function SendPayment() {
             </p>
           </div>
         </div>
-        <a href={buildTxExplorerUrl(ARC_TESTNET_ID, txHash)} target="_blank" rel="noopener noreferrer"
+        <a href={buildTxExplorerUrl(ARC_CHAIN_ID, txHash)} target="_blank" rel="noopener noreferrer"
           className="flex items-center gap-2 text-xs text-[var(--muted)] hover:text-[var(--ink)] transition-colors">
           <ExternalLink className="w-3.5 h-3.5" /> View on Arc Explorer
         </a>
@@ -139,9 +139,9 @@ export default function SendPayment() {
 
       {/* CTA */}
       {isWrongChain ? (
-        <button onClick={() => switchChain({ chainId: ARC_TESTNET_ID })} disabled={isSwitching}
+        <button onClick={() => switchChain({ chainId: ARC_CHAIN_ID })} disabled={isSwitching}
           className="w-full h-12 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-          {isSwitching && <Loader2 className="w-4 h-4 animate-spin" />} Switch to Arc Testnet
+          {isSwitching && <Loader2 className="w-4 h-4 animate-spin" />} Switch to Arc
         </button>
       ) : (
         <button onClick={handleSend}

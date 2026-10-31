@@ -4,19 +4,18 @@
  */
 import { useState, useEffect } from 'react'
 import { createPublicClient, http, erc20Abi } from 'viem'
-import { arcTestnet } from 'viem/chains'
 import { Copy, ExternalLink, AtSign, RefreshCw, Eye, EyeOff } from 'lucide-react'
 import { getUsdc, requireChain, buildAddressExplorerUrl } from '@/onchain-facts'
 import { Amount, usdcDecimalsFor } from '@/onchain-money'
+import { ARC_CHAIN_ID, arcChain as arcChainDef } from '@/chain'
 import { toast } from 'sonner'
 
-const ARC_TESTNET_ID = 5042002
-const usdcFact = getUsdc(ARC_TESTNET_ID)!
-const arcChain  = requireChain(ARC_TESTNET_ID)
+const usdcFact = getUsdc(ARC_CHAIN_ID)!
+const arcChainInfo = requireChain(ARC_CHAIN_ID)
 
 const publicClient = createPublicClient({
-  chain: { ...arcTestnet, contracts: {} },
-  transport: http(arcChain.rpcUrls[0], { timeout: 8000 }),
+  chain: { ...arcChainDef, contracts: {} },
+  transport: http(arcChainInfo.rpcUrls[0], { timeout: 8000 }),
 })
 
 interface Props { walletAddress: string; username: string; walletId?: string }
@@ -56,7 +55,7 @@ export default function WalletDashboard({ walletAddress: address, username }: Pr
   }, [address])
 
   const balance = balanceRaw !== undefined
-    ? Amount.fromRaw(balanceRaw, usdcDecimalsFor(ARC_TESTNET_ID)).toFixed(2)
+    ? Amount.fromRaw(balanceRaw, usdcDecimalsFor(ARC_CHAIN_ID)).toFixed(2)
     : '—'
 
   const copy = (val: string, label: string) => {
@@ -99,7 +98,7 @@ export default function WalletDashboard({ walletAddress: address, username }: Pr
               <RefreshCw style={{ width: '13px', height: '13px' }} className={refreshing ? 'animate-spin' : ''} />
             </button>
           </div>
-          <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--t3)' }}>Arc Testnet · USDC</p>
+          <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--t3)' }}>{arcChainDef.name} · USDC</p>
         </div>
       </div>
 
@@ -137,7 +136,7 @@ export default function WalletDashboard({ walletAddress: address, username }: Pr
               style={{ padding: '6px', borderRadius: '8px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--t3)' }}>
               <Copy style={{ width: '13px', height: '13px' }} />
             </button>
-            <a href={buildAddressExplorerUrl(ARC_TESTNET_ID, address)} target="_blank" rel="noopener noreferrer"
+            <a href={buildAddressExplorerUrl(ARC_CHAIN_ID, address)} target="_blank" rel="noopener noreferrer"
               style={{ padding: '6px', borderRadius: '8px', color: 'var(--t3)', display: 'flex', alignItems: 'center' }}>
               <ExternalLink style={{ width: '13px', height: '13px' }} />
             </a>
