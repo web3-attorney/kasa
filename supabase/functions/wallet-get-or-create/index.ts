@@ -248,8 +248,8 @@ Deno.serve(async (req) => {
     // so 0.01 USDC covers thousands of transactions. This is NOT a user gift.
     if (isNew) {
       const devWalletId = Deno.env.get('DEV_WALLET_ID')
-      const gasSeed = Deno.env.get('NEW_WALLET_GAS_SEED') ?? '0.01'
-      if (devWalletId) {
+      const gasSeed = Deno.env.get('NEW_WALLET_GAS_SEED') ?? '0'
+      if (devWalletId && gasSeed && parseFloat(gasSeed) > 0) {
         const fundRes = await circlePost(apiKey, entitySecret, pem, '/w3s/developer/transactions/transfer', {
           idempotencyKey: crypto.randomUUID(),
           sourceWalletId: devWalletId,
