@@ -4,9 +4,9 @@ import { Star, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 import { keccak256, toBytes } from 'viem'
 import { buildTxExplorerUrl } from '@/onchain-facts'
 import { toast } from 'sonner'
+import { ARC_CHAIN_ID as ARC_TESTNET_ID } from '@/chain'
 
 const REPUTATION_REGISTRY = '0x8004B663056A597Dffe9eCcC1965A193B7388713' as const
-const ARC_TESTNET_ID = 5042002
 
 const reputationAbi = [
   {

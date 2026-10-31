@@ -7,7 +7,7 @@ const j = (d: unknown, s = 200) => new Response(JSON.stringify(d), { status: s, 
 const e = (m: string, s = 400) => j({ error: m }, s)
 
 const REGISTRY = '0x6a86b61cb3205b8d017186b8ecc9629641c6dd21'
-const RPC = 'https://rpc.testnet.arc.io'
+const RPC = Deno.env.get('ARC_RPC') ?? 'https://rpc.mainnet.arc.io'
 
 // ── Keccak-256 pure TypeScript (no imports) ───────────────────────────────────
 // RC: https://github.com/nicowillis/keccak in public domain
@@ -228,7 +228,7 @@ Deno.serve(async (req) => {
 
     if (!wallet) {
       const cr = await circlePost(apiKey, entitySecret, pem, '/w3s/developer/wallets', {
-        accountType: 'EOA', blockchains: ['ARC-TESTNET'], count: 1, walletSetId: wsId,
+        accountType: 'EOA', blockchains: [Deno.env.get('ARC_BLOCKCHAIN') ?? 'ARC-MAINNET'], count: 1, walletSetId: wsId,
         metadata: [{ name: `Kasa:${userId}`, refId: userId }],
         idempotencyKey: crypto.randomUUID(),
       }) as { data?: { wallets?: Array<Record<string, unknown>> }; message?: string }
@@ -254,7 +254,7 @@ Deno.serve(async (req) => {
           destinationAddress: wallet.address as string,
           amounts: ['1'],
           tokenAddress: '0x3600000000000000000000000000000000000000',
-          blockchain: 'ARC-TESTNET',
+          blockchain: Deno.env.get('ARC_BLOCKCHAIN') ?? 'ARC-MAINNET',
           feeLevel: 'MEDIUM',
         }) as { data?: { id?: string }; message?: string }
         console.log('Fund tx:', fundRes.data?.id ?? fundRes.message)

@@ -2,7 +2,7 @@ const CORS={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'au
 const j=(d:unknown,s=200)=>new Response(JSON.stringify(d),{status:s,headers:{...CORS,'Content-Type':'application/json'}})
 const e=(m:string,s=400)=>j({error:m},s)
 const USDC='0x3600000000000000000000000000000000000000'
-const ARC_RPC='https://rpc.testnet.arc.io'
+const ARC_RPC=Deno.env.get('ARC_RPC')??`https://rpc.mainnet.arc.io`
 async function rpcCall(method:string,params:unknown[]){
   const r=await fetch(ARC_RPC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})})
   const j2=await r.json() as{result:string}

@@ -5,21 +5,19 @@
 import { useState, useEffect, useCallback } from 'react'
 import { erc20Abi, createPublicClient, http } from 'viem'
 import { PiggyBank, Loader2, CheckCircle2, AlertCircle, Activity, ArrowDownToLine } from 'lucide-react'
-import { getUsdc, requireChain, buildAddressExplorerUrl } from '@/onchain-facts'
+import { getUsdc, buildAddressExplorerUrl } from '@/onchain-facts'
 import { Amount, usdcDecimalsFor } from '@/onchain-money'
-import { arcTestnet } from 'viem/chains'
 import { toast } from 'sonner'
 import { apiFetch } from '@/kasaWallet'
+import { ARC_CHAIN_ID, arcChain } from '@/chain'
 
-const ARC_TESTNET_ID = 5042002
-const usdcFact = getUsdc(ARC_TESTNET_ID)!
+const usdcFact = getUsdc(ARC_CHAIN_ID)!
 const USDC_ADDR = usdcFact.address as `0x${string}`
-const KASA_SAVINGS_ADDR = '0xce160338e23cbd581bfecc8f5857c7c4f686d9b6' as const
+const KASA_SAVINGS_ADDR = (import.meta.env.VITE_SAVINGS_ADDRESS ?? '0xce160338e23cbd581bfecc8f5857c7c4f686d9b6') as `0x${string}`
 
-const arcChain = requireChain(ARC_TESTNET_ID)
 const publicClient = createPublicClient({
-  chain: { ...arcTestnet, contracts: {} },
-  transport: http(arcChain.rpcUrls[0], { timeout: 8000 }),
+  chain: { ...arcChain, contracts: {} },
+  transport: http(arcChain.rpcUrls.default.http[0], { timeout: 8000 }),
 })
 
 const kasaAbi = [
@@ -111,8 +109,8 @@ export default function AutoSave({ walletId, walletAddress }: Props) {
   const planBalance    = planData ? planData[4] : 0n
   // withdrawn overrides onchain active — contract keeps endTime set after withdraw
   const planActive     = withdrawn ? false : (planData ? planData[5] : false)
-  const planBalanceFmt = Amount.fromRaw(planBalance, usdcDecimalsFor(ARC_TESTNET_ID)).toFixed(2)
-  const balanceFmt     = balanceRaw !== undefined ? Amount.fromRaw(balanceRaw, usdcDecimalsFor(ARC_TESTNET_ID)).toFixed(2) : '—'
+  const planBalanceFmt = Amount.fromRaw(planBalance, usdcDecimalsFor(ARC_CHAIN_ID)).toFixed(2)
+  const balanceFmt     = balanceRaw !== undefined ? Amount.fromRaw(balanceRaw, usdcDecimalsFor(ARC_CHAIN_ID)).toFixed(2) : '—'
   const hasApproval    = allowanceRaw !== undefined && allowanceRaw > 0n
 
   const handleActivate = async () => {
@@ -360,7 +358,7 @@ export default function AutoSave({ walletId, walletAddress }: Props) {
 
       <div style={{ padding: '12px 14px', borderRadius: '14px', background: '#fff', border: '1px solid var(--border)', fontSize: '12px', boxShadow: '0 1px 3px rgba(13,21,38,.04)' }}>
         <p style={{ margin: '0 0 4px', fontWeight: 700, color: 'var(--t1)' }}>KasaSavings contract</p>
-        <a href={buildAddressExplorerUrl(ARC_TESTNET_ID, KASA_SAVINGS_ADDR)} target="_blank" rel="noopener noreferrer"
+        <a href={buildAddressExplorerUrl(ARC_CHAIN_ID, KASA_SAVINGS_ADDR)} target="_blank" rel="noopener noreferrer"
           style={{ fontFamily: 'monospace', fontSize: '11px', color: 'var(--acc)', wordBreak: 'break-all', textDecoration: 'none' }}>
           {KASA_SAVINGS_ADDR}
         </a>

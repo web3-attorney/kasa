@@ -16,7 +16,7 @@ const CORS = {
 }
 const j = (d: unknown, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
-const RPC = 'https://rpc.testnet.arc.io'
+const RPC = Deno.env.get('ARC_RPC') ?? 'https://rpc.mainnet.arc.io'
 const USDC = '0x3600000000000000000000000000000000000000'
 
 async function encryptEntitySecret(entitySecret: string, publicKeyPem: string): Promise<string> {

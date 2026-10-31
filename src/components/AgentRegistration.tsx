@@ -9,8 +9,9 @@ import { parseEventLogs } from 'viem'
 import { Fingerprint, ExternalLink, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 import { buildTxExplorerUrl, buildAddressExplorerUrl } from '@/onchain-facts'
 
+import { ARC_CHAIN_ID as ARC_TESTNET_ID } from '@/chain'
+
 const IDENTITY_REGISTRY = '0x8004A818BFB912233c491871b3d84c89A494BD9e' as const
-const ARC_TESTNET_ID = 5042002
 
 const identityAbi = [
   {

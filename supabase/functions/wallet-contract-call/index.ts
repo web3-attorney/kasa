@@ -73,7 +73,7 @@ Deno.serve(async(req)=>{
       let amount = meta.amount
       if (amount === '__FETCH__') {
         try {
-          const RPC = 'https://rpc.testnet.arc.io'
+          const RPC = Deno.env.get('ARC_RPC') ?? 'https://rpc.mainnet.arc.io'
           // Use walletAddress from body if provided, else fetch from Circle
           let addr = walletAddrParam ?? ''
           if (!addr) {

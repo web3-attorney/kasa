@@ -7,7 +7,7 @@ const j = (d: unknown, s = 200) => new Response(JSON.stringify(d), { status: s, 
 const e = (m: string, s = 400) => j({ error: m }, s)
 
 const REGISTRY = '0x6a86b61cb3205b8d017186b8ecc9629641c6dd21'
-const RPC = 'https://rpc.testnet.arc.io'
+const RPC = Deno.env.get('ARC_RPC') ?? 'https://rpc.mainnet.arc.io'
 
 // ── Keccak-256 pure TypeScript ────────────────────────────────────────────────
 const RC = [

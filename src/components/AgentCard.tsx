@@ -2,8 +2,9 @@ import { useReadContract } from 'wagmi'
 import { ExternalLink, CircleUser, Wifi } from 'lucide-react'
 import { buildAddressExplorerUrl, buildTxExplorerUrl } from '@/onchain-facts'
 
+import { ARC_CHAIN_ID as ARC_TESTNET_ID } from '@/chain'
+
 const IDENTITY_REGISTRY = '0x8004A818BFB912233c491871b3d84c89A494BD9e' as const
-const ARC_TESTNET_ID = 5042002
 
 const identityAbi = [
   {

@@ -1,6 +1,6 @@
 const CORS={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type','Access-Control-Allow-Methods':'GET, POST, PUT, DELETE, OPTIONS'}
 const j=(d:unknown,s=200)=>new Response(JSON.stringify(d),{status:s,headers:{...CORS,'Content-Type':'application/json'}})
-const ARC_RPC='https://rpc.testnet.arc.io'
+const ARC_RPC=Deno.env.get('ARC_RPC')??`https://rpc.mainnet.arc.io`
 const REGISTRY=Deno.env.get('VITE_REGISTRY_ADDRESS')??''
 async function rpc(method:string,params:unknown[]){const r=await fetch(ARC_RPC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})});return(await r.json() as{result:string}).result}
 Deno.serve(async(req)=>{
