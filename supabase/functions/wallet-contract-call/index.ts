@@ -42,6 +42,17 @@ Deno.serve(async(req)=>{
     const SB_KEY=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const SAVINGS=Deno.env.get('VITE_SAVINGS_ADDRESS') ?? ''
 
+    // For withdraw(), mark the autosave plan inactive BEFORE the contract call
+    // so that when the funds land in the wallet, inbound-watcher won't re-trigger a deposit
+    const fn = abiFunctionSignature.split('(')[0].toLowerCase()
+    if (fn === 'withdraw' && SAVINGS && contractAddress.toLowerCase() === SAVINGS.toLowerCase()) {
+      await fetch(`${SB_URL}/rest/v1/autosave_plans?wallet_id=eq.${encodeURIComponent(walletId)}`, {
+        method: 'PATCH',
+        headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: false, user_deactivated: true, updated_at: Date.now() })
+      })
+    }
+
     const pkRes=await fetch('https://api.circle.com/v1/w3s/config/entity/publicKey',{headers:{'Authorization':`Bearer ${apiKey}`}})
     const pkData=await pkRes.json() as{data?:{publicKey:string}}
     if(!pkData.data?.publicKey) return j({error:'Failed to get public key'},500)

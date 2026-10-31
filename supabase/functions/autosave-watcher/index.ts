@@ -135,11 +135,13 @@ Deno.serve(async (req) => {
         try {
           const savedBal = await getSavingsBalance(SAVINGS, addr)
           const savedAmt = savedBal > 0n ? (Number(savedBal) / 1e6).toFixed(2) : '0'
-          const txId = await circleContractCall(plan.wallet_id, SAVINGS, 'withdraw()', [], CIRCLE_KEY, ENTITY_SECRET)
+          // Mark inactive BEFORE calling withdraw so inbound-watcher can't re-trigger a deposit
+          // when the withdrawn funds land in the wallet
           await fetch(`${SB_URL}/rest/v1/autosave_plans?wallet_id=eq.${encodeURIComponent(plan.wallet_id)}`, {
             method: 'PATCH', headers: sbH,
             body: JSON.stringify({ active: false, user_deactivated: true, updated_at: now })
           })
+          const txId = await circleContractCall(plan.wallet_id, SAVINGS, 'withdraw()', [], CIRCLE_KEY, ENTITY_SECRET)
           if (txId) {
             await writeTxHistory(SB_URL, SB_KEY, plan.wallet_id, txId, 'save', savedAmt, SAVINGS, 'Auto-withdraw on maturity', 'Savings Withdrawal')
           }

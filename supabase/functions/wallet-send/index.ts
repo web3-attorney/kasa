@@ -20,7 +20,7 @@ async function waitForTxHash(txId:string,apiKey:string,timeoutMs=30000):Promise<
   while(Date.now()<deadline){
     await new Promise(r=>setTimeout(r,2000))
     try{
-      const r=await fetch(`https://api.circle.com/v1/w3s/transactions/${txId}`,{
+      const r=await fetch(`https://api.circle.com/v1/w3s/developer/transactions/${txId}`,{
         headers:{'Authorization':`Bearer ${apiKey}`}
       })
       const d=await r.json() as{data?:{transaction?:{state:string;txHash?:string}}}

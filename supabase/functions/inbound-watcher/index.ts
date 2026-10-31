@@ -36,6 +36,7 @@ Deno.serve(async (req) => {
     const apiKey = Deno.env.get('CIRCLE_API_KEY')!
     const SB_URL = Deno.env.get('SUPABASE_URL')!
     const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const SAVINGS = (Deno.env.get('VITE_SAVINGS_ADDRESS') ?? '').toLowerCase()
     const sbH = { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json', 'Accept': 'application/json' }
 
     // Fetch recent transactions from Circle — filter inbound client-side
@@ -52,7 +53,10 @@ Deno.serve(async (req) => {
       tx.transactionType === 'INBOUND' &&
       tx.state === 'COMPLETE' &&
       tx.txHash &&
-      (tx.amounts?.length ?? 0) > 0
+      (tx.amounts?.length ?? 0) > 0 &&
+      // Skip inbound txs originating from the savings contract (withdrawals)
+      // so they don't trigger autosave re-deposits
+      tx.sourceAddress?.toLowerCase() !== SAVINGS
     )
 
     if (completed.length === 0) return j({ found: 0, new: 0 })
