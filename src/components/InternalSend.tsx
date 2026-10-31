@@ -7,18 +7,17 @@ import { erc20Abi, isAddress, createPublicClient, http } from 'viem'
 import { ArrowUpRight, Loader2, CheckCircle2, ExternalLink, ShieldAlert, BookUser, X } from 'lucide-react'
 import { getUsdc, requireChain, buildTxExplorerUrl } from '@/onchain-facts'
 import { Amount, parseAmount } from '@/onchain-money'
-import { arcTestnet } from 'viem/chains'
+import { ARC_CHAIN_ID, arcChain as arcChainDef } from '@/chain'
 import { toast } from 'sonner'
 import { apiFetch } from '@/kasaWallet'
 import Contacts, { type Contact } from './Contacts'
 
-const ARC_TESTNET_ID = 5042002
-const USDC = getUsdc(ARC_TESTNET_ID)!
+const USDC = getUsdc(ARC_CHAIN_ID)!
 
-const arcChain = requireChain(ARC_TESTNET_ID)
+const arcChainInfo = requireChain(ARC_CHAIN_ID)
 const publicClient = createPublicClient({
-  chain: { ...arcTestnet, contracts: {} },
-  transport: http(arcChain.rpcUrls[0], { timeout: 8000 }),
+  chain: { ...arcChainDef, contracts: {} },
+  transport: http(arcChainInfo.rpcUrls[0], { timeout: 8000 }),
 })
 
 interface Props {
@@ -81,7 +80,7 @@ export default function InternalSend({ walletId, walletAddress, email }: Props) 
         }
         resolvedTo = data.address
       }
-      const parsed = parseAmount(ARC_TESTNET_ID, amount)
+      const parsed = parseAmount(ARC_CHAIN_ID, amount)
       // Try to send; server returns 402 if limit exceeded
       const res = await apiFetch('/api/wallet/send', {
         method: 'POST',
@@ -163,7 +162,7 @@ export default function InternalSend({ walletId, walletAddress, email }: Props) 
           </p>
           {memo && <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--t3)' }}>"{memo}"</p>}
         </div>
-        <a href={buildTxExplorerUrl(ARC_TESTNET_ID, txHash)} target="_blank" rel="noopener noreferrer"
+        <a href={buildTxExplorerUrl(ARC_CHAIN_ID, txHash)} target="_blank" rel="noopener noreferrer"
           style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--t3)', textDecoration: 'none' }}>
           <ExternalLink style={{ width: '12px', height: '12px' }} /> View on explorer
         </a>
