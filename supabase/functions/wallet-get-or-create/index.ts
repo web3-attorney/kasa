@@ -244,21 +244,22 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Fund new wallets with 1 USDC from dev wallet so they can pay gas
+    // New wallets need a tiny USDC seed for gas only — Arc gas is fractions of a cent,
+    // so 0.01 USDC covers thousands of transactions. This is NOT a user gift.
     if (isNew) {
       const devWalletId = Deno.env.get('DEV_WALLET_ID')
+      const gasSeed = Deno.env.get('NEW_WALLET_GAS_SEED') ?? '0.01'
       if (devWalletId) {
         const fundRes = await circlePost(apiKey, entitySecret, pem, '/w3s/developer/transactions/transfer', {
           idempotencyKey: crypto.randomUUID(),
           sourceWalletId: devWalletId,
           destinationAddress: wallet.address as string,
-          amounts: ['1'],
+          amounts: [gasSeed],
           tokenAddress: '0x3600000000000000000000000000000000000000',
           blockchain: Deno.env.get('ARC_BLOCKCHAIN') ?? 'ARC-MAINNET',
           feeLevel: 'MEDIUM',
         }) as { data?: { id?: string }; message?: string }
-        console.log('Fund tx:', fundRes.data?.id ?? fundRes.message)
-        // Wait for fund to confirm before registering username
+        console.log('Gas seed tx:', fundRes.data?.id ?? fundRes.message)
         if (fundRes.data?.id) {
           await waitForTx(fundRes.data.id, apiKey, 60000)
           await new Promise(r => setTimeout(r, 3000))
