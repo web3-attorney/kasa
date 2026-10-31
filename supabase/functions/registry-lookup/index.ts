@@ -3,7 +3,12 @@ const j=(d:unknown,s=200)=>new Response(JSON.stringify(d),{status:s,headers:{...
 const e=(m:string,s=400)=>j({error:m},s)
 const ARC_RPC='https://rpc.testnet.arc.io'
 const REGISTRY=Deno.env.get('VITE_REGISTRY_ADDRESS')??''
-async function rpc(method:string,params:unknown[]){const r=await fetch(ARC_RPC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})});return(await r.json() as{result:string}).result}
+async function rpc(method:string,params:unknown[]){
+  const r=await fetch(ARC_RPC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})})
+  const d=await r.json() as{result?:string;error?:{message:string}}
+  if(d.error)throw new Error(d.error.message)
+  return d.result??null
+}
 Deno.serve(async(req)=>{
   if(req.method==='OPTIONS')return new Response(null,{status:204,headers:CORS})
   const url=new URL(req.url)
@@ -15,7 +20,9 @@ Deno.serve(async(req)=>{
     const offset='0000000000000000000000000000000000000000000000000000000000000020'
     const len=nb.length.toString(16).padStart(64,'0')
     const data32=Array.from(nb).map(b=>b.toString(16).padStart(2,'0')).join('').padEnd(Math.ceil(nb.length/32)*64,'0')
-    const result=await rpc('eth_call',[{to:REGISTRY,data:'0xbf40fac1'+offset+len+data32},'latest'])
+    // resolve(string) selector = keccak256("resolve(string)")[0:4] = 0x461a4478
+    const result=await rpc('eth_call',[{to:REGISTRY,data:'0x461a4478'+offset+len+data32},'latest'])
+    if(!result||result==='0x')return e('Username not found',404)
     const addr='0x'+result.slice(-40)
     if(addr==='0x0000000000000000000000000000000000000000')return e('Username not found',404)
     return j({address:addr})

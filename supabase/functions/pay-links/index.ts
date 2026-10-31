@@ -11,17 +11,33 @@ Deno.serve(async(req)=>{
       const{toWalletId,toAddress,toUsername,amount,memo}=await req.json() as{toWalletId?:string;toAddress?:string;toUsername?:string;amount?:string;memo?:string}
       if(!toWalletId||!toAddress||!amount)return e('missing fields')
       const id=crypto.randomUUID().replace(/-/g,'').slice(0,14)
-      await fetch(`${SB_URL}/rest/v1/pay_links`,{method:'POST',headers:h,body:JSON.stringify({id,to_wallet_id:toWalletId,to_address:toAddress,to_username:toUsername??'',amount,memo:memo??'',created_at:Date.now(),paid_tx_hash:null})})
+      await fetch(`${SB_URL}/rest/v1/pay_links`,{method:'POST',headers:{...h,'Prefer':'resolution=merge-duplicates'},body:JSON.stringify({id,to_wallet_id:toWalletId,to_address:toAddress,to_username:toUsername??'',amount,memo:memo??'',created_at:Date.now(),paid_tx_hash:null})})
       return j({id,url:`/pay/${id}`})
     }
     if(req.method==='GET'){
-      const id=url.pathname.split('/').pop()
+      // Support both /pay-links?id=xxx (lookup) and /pay-links?walletId=xxx (list)
+      const id=url.searchParams.get('id')
+      const walletId=url.searchParams.get('walletId')
+      if(id){
+        const r=await fetch(`${SB_URL}/rest/v1/pay_links?id=eq.${encodeURIComponent(id)}&limit=1`,{headers:h})
+        const rows=await r.json() as Record<string,unknown>[]
+        if(!rows[0])return e('Not found',404)
+        const d=rows[0]
+        return j({id:d.id,toWalletId:d.to_wallet_id,toAddress:d.to_address,toUsername:d.to_username,amount:d.amount,memo:d.memo,createdAt:d.created_at,paidTxHash:d.paid_tx_hash})
+      }
+      if(walletId){
+        const r=await fetch(`${SB_URL}/rest/v1/pay_links?to_wallet_id=eq.${encodeURIComponent(walletId)}&order=created_at.desc`,{headers:h})
+        const rows=await r.json() as Record<string,unknown>[]
+        return j({links:rows.map(d=>({id:d.id,toAddress:d.to_address,toUsername:d.to_username,amount:d.amount,memo:d.memo,createdAt:d.created_at,paidTxHash:d.paid_tx_hash}))})
+      }
+      return e('id or walletId required')
+    }
+    if(req.method==='PATCH'){
+      const id=url.searchParams.get('id')
       if(!id)return e('id required')
-      const r=await fetch(`${SB_URL}/rest/v1/pay_links?id=eq.${encodeURIComponent(id)}&limit=1`,{headers:h})
-      const rows=await r.json() as Record<string,unknown>[]
-      if(!rows[0])return e('Not found',404)
-      const d=rows[0]
-      return j({id:d.id,toWalletId:d.to_wallet_id,toAddress:d.to_address,toUsername:d.to_username,amount:d.amount,memo:d.memo,createdAt:d.created_at,paidTxHash:d.paid_tx_hash})
+      const{paidTxHash}=await req.json() as{paidTxHash?:string}
+      await fetch(`${SB_URL}/rest/v1/pay_links?id=eq.${encodeURIComponent(id)}`,{method:'PATCH',headers:h,body:JSON.stringify({paid_tx_hash:paidTxHash})})
+      return j({ok:true})
     }
     return e('Method not allowed',405)
   }catch(err2){return e(err2 instanceof Error?err2.message:'Failed',500)}

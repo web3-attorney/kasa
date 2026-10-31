@@ -1394,3 +1394,37 @@
 {"level":"debug","message":"[vite] hot updated: /src/components/TransactionHistory.tsx","timestamp":1793424954184}
 {"level":"debug","message":"[vite] hot updated: /src/components/SpendingLimits.tsx","timestamp":1793424954184}
 {"level":"debug","message":"[vite] hot updated: /src/components/Contacts.tsx","timestamp":1793424954184}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793425100521}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793425255327}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793425255342}
+{"level":"debug","message":"[vite] connected.","timestamp":1793425261774}
+{"level":"debug","message":"[vite] hot updated: /src/components/ScheduledPayments.tsx","timestamp":1793425325699}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793425325699}
+{"level":"debug","message":"[vite] hot updated: /src/components/ScheduledPayments.tsx","timestamp":1793425325700}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793425325700}
+{"level":"debug","message":"[vite] hot updated: /src/components/SpendingLimits.tsx","timestamp":1793425328228}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793425328228}
+{"level":"debug","message":"[vite] hot updated: /src/components/SpendingLimits.tsx","timestamp":1793425328233}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793425328233}
+{"level":"debug","message":"(previous line repeated 1× more)","timestamp":1793425338732}
+{"level":"debug","message":"[vite] hot updated: /src/App.tsx","timestamp":1793425338732}
+{"level":"debug","message":"[vite] hot updated: /src/components/FxRouter.tsx","timestamp":1793425338733}
+{"level":"debug","message":"[vite] hot updated: /src/components/PaymentRequest.tsx","timestamp":1793425338733}
+{"level":"debug","message":"[vite] hot updated: /src/components/SpendingLimits.tsx","timestamp":1793425338733}
+{"level":"debug","message":"[vite] hot updated: /src/components/AuthScreen.tsx","timestamp":1793425338733}
+{"level":"debug","message":"[vite] hot updated: /src/components/Contacts.tsx","timestamp":1793425338734}
+{"level":"debug","message":"[vite] hot updated: /src/components/ScheduledPayments.tsx","timestamp":1793425338734}
+{"level":"debug","message":"[vite] hot updated: /src/components/TransactionHistory.tsx","timestamp":1793425338735}
+{"level":"debug","message":"[vite] hot updated: /src/components/InternalSend.tsx","timestamp":1793425338735}
+{"level":"debug","message":"[vite] hot updated: /src/components/AutoSave.tsx","timestamp":1793425338735}
+{"level":"debug","message":"(previous line repeated 1× more)","timestamp":1793425339222}
+{"level":"debug","message":"[vite] hot updated: /src/App.tsx","timestamp":1793425339222}
+{"level":"debug","message":"[vite] hot updated: /src/components/FxRouter.tsx","timestamp":1793425339222}
+{"level":"debug","message":"[vite] hot updated: /src/components/PaymentRequest.tsx","timestamp":1793425339223}
+{"level":"debug","message":"[vite] hot updated: /src/components/SpendingLimits.tsx","timestamp":1793425339223}
+{"level":"debug","message":"[vite] hot updated: /src/components/AuthScreen.tsx","timestamp":1793425339223}
+{"level":"debug","message":"[vite] hot updated: /src/components/Contacts.tsx","timestamp":1793425339223}
+{"level":"debug","message":"[vite] hot updated: /src/components/ScheduledPayments.tsx","timestamp":1793425339223}
+{"level":"debug","message":"[vite] hot updated: /src/components/TransactionHistory.tsx","timestamp":1793425339223}
+{"level":"debug","message":"[vite] hot updated: /src/components/InternalSend.tsx","timestamp":1793425339223}
+{"level":"debug","message":"[vite] hot updated: /src/components/AutoSave.tsx","timestamp":1793425339223}

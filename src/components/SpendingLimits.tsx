@@ -29,7 +29,7 @@ export default function SpendingLimits({ walletId }: Props) {
 
   const load = useCallback(async () => {
     if (!walletId) return
-    const res = await fetch(`/api/limits?walletId=${walletId}`)
+    const res = await apiFetch(`/api/limits?walletId=${walletId}`)
     if (res.ok) setData(await res.json() as LimitData)
   }, [walletId])
 

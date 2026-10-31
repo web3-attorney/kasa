@@ -22,8 +22,9 @@ Deno.serve(async(req)=>{
       return j({id,walletId,toAddress,amount,label:label??'',intervalMs,nextRun:s.next_run,lastRun:null,active:true,txHashes:[]})
     }
     if(req.method==='DELETE'){
-      const id=url.pathname.split('/').pop()
-      await fetch(`${SB_URL}/rest/v1/schedules?id=eq.${encodeURIComponent(id??'')}`,{method:'DELETE',headers:h})
+      const id=url.searchParams.get('id')
+      if(!id)return e('id required')
+      await fetch(`${SB_URL}/rest/v1/schedules?id=eq.${encodeURIComponent(id)}`,{method:'DELETE',headers:h})
       return j({ok:true})
     }
     return e('Method not allowed',405)

@@ -70,7 +70,7 @@ export default function ScheduledPayments({ walletId }: Props) {
   }
 
   const handleDelete = async (id: string) => {
-    await apiFetch(`/api/schedules/${id}`, { method: 'DELETE' })
+    await apiFetch(`/api/schedules?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
     toast.success('Schedule removed')
     await load()
   }
