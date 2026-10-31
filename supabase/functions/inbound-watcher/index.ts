@@ -95,6 +95,17 @@ Deno.serve(async (req) => {
       newCount++
     }
 
+    // If any new inbound txs were found, trigger autosave-watcher for this wallet
+    // so auto-deposit fires immediately rather than waiting for pg_cron
+    if (newCount > 0) {
+      const SB_URL = Deno.env.get('SUPABASE_URL')!
+      fetch(`${SB_URL}/functions/v1/autosave-watcher?walletId=${encodeURIComponent(walletId)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!}` },
+        body: '{}',
+      }).then(r => r.json()).then(d => console.log('autosave-watcher result:', JSON.stringify(d).slice(0, 100))).catch(() => { /* non-fatal */ })
+    }
+
     return j({ found: completed.length, new: newCount })
   } catch (err) {
     return e(err instanceof Error ? err.message : 'Failed', 500)

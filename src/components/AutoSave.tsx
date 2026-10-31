@@ -39,22 +39,22 @@ const kasaAbi = [
 
 interface Props { walletId?: string; walletAddress?: string }
 
-async function serverContractCall(walletId: string, contractAddress: string, sig: string, params: (string | number | boolean)[]): Promise<string> {
+async function serverContractCall(walletId: string, contractAddress: string, sig: string, params: (string | number | boolean)[], walletAddress?: string): Promise<string> {
   const res = await apiFetch('/api/wallet/contract-call', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ walletId, contractAddress, abiFunctionSignature: sig, abiParameters: params }),
+    body: JSON.stringify({ walletId, walletAddress, contractAddress, abiFunctionSignature: sig, abiParameters: params }),
   })
   const data = await res.json() as { txId?: string; txHash?: string; error?: string }
   if (!res.ok) throw new Error(data.error ?? 'Contract call failed')
   return data.txHash ?? data.txId ?? ''
 }
 
-async function registerServerPlan(walletId: string, address: string, percent: number) {
+async function registerServerPlan(walletId: string, address: string, percent: number, durationDays?: number) {
   await apiFetch('/api/autosave/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ walletId, address, percent }),
+    body: JSON.stringify({ walletId, address, percent, durationDays }),
   })
 }
 
@@ -119,9 +119,9 @@ export default function AutoSave({ walletId, walletAddress }: Props) {
     setBusy(true); setBusyLabel('Activating…')
     try {
       if (!walletId || !walletAddress) throw new Error('No wallet')
-      await serverContractCall(walletId, KASA_SAVINGS_ADDR, 'activatePlan(uint8,uint32)', [savePct, durationDays])
+      await serverContractCall(walletId, KASA_SAVINGS_ADDR, 'activatePlan(uint8,uint32)', [savePct, durationDays], walletAddress)
       // Register server-side watcher so auto-save fires even when app is closed
-      await registerServerPlan(walletId, walletAddress, savePct)
+      await registerServerPlan(walletId, walletAddress, savePct, durationDays)
       setWithdrawn(false) // clear override so onchain state takes over
       toast.success('Savings plan activated!')
       await refetch()
@@ -134,7 +134,7 @@ export default function AutoSave({ walletId, walletAddress }: Props) {
     try {
       if (!walletId) throw new Error('No wallet')
       const MAX = '115792089237316195423570985008687907853269984665640564039457584007913129639935'
-      await serverContractCall(walletId, USDC_ADDR, 'approve(address,uint256)', [KASA_SAVINGS_ADDR, MAX])
+      await serverContractCall(walletId, USDC_ADDR, 'approve(address,uint256)', [KASA_SAVINGS_ADDR, MAX], walletAddress)
       toast.success('Approved — auto-save is live!')
       await refetch()
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed') }
@@ -148,23 +148,25 @@ export default function AutoSave({ walletId, walletAddress }: Props) {
     void refetch()
   }, [refetch, setWithdrawn])
 
-  // Listen for server-pushed reset (maturity auto-withdraw or manual reset from server)
+  // Poll for plan state changes (maturity auto-withdraw etc.) every 30s
   useEffect(() => {
-    if (!walletId) return
-    const token = sessionStorage.getItem('kasaToken') ?? ''
-    const es = new EventSource(`/api/events?token=${token}`)
-    const handler = (e: MessageEvent) => {
+    if (!walletId || !walletAddress) return
+    const id = setInterval(() => {
+      void (async () => {
       try {
-        const msg = JSON.parse(e.data as string) as { type: string; reason?: string }
-        if (msg.type === 'autosave-reset') {
-          toast.success(msg.reason ?? 'Auto-save plan completed — set a new plan to continue saving')
+        const res = await apiFetch(`/api/autosave/register?walletId=${walletId}`)
+        if (!res.ok) return
+        const d = await res.json() as { active: boolean; userDeactivated: boolean }
+        // If plan was active in local state but server says deactivated → maturity withdrawal happened
+        if (planActive && (!d.active || d.userDeactivated)) {
+          toast.success('Savings plan completed — set a new plan to continue saving')
           resetToSetup()
         }
       } catch { /* ignore */ }
-    }
-    es.addEventListener('message', handler)
-    return () => { es.removeEventListener('message', handler); es.close() }
-  }, [walletId, resetToSetup])
+      })()
+    }, 30_000)
+    return () => clearInterval(id)
+  }, [walletId, walletAddress, planActive, resetToSetup])
 
   const handleWithdraw = async () => {
     if (planBalance === 0n) {
@@ -178,7 +180,7 @@ export default function AutoSave({ walletId, walletAddress }: Props) {
     setBusy(true); setBusyLabel('Withdrawing…')
     try {
       if (!walletId || !walletAddress) throw new Error('No wallet')
-      await serverContractCall(walletId, KASA_SAVINGS_ADDR, 'withdraw()', [])
+      await serverContractCall(walletId, KASA_SAVINGS_ADDR, 'withdraw()', [], walletAddress)
       // Deactivate server watcher after withdraw
       await registerServerPlan(walletId, walletAddress, 0)
       toast.success('Savings withdrawn! Set a new plan to start saving again.')

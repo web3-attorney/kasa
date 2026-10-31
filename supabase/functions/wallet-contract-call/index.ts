@@ -33,7 +33,7 @@ function txMeta(sig:string, params:string[], contractAddress:string, savingsAddr
 Deno.serve(async(req)=>{
   if(req.method==='OPTIONS')return new Response(null,{status:204,headers:CORS})
   try{
-    const{walletId,contractAddress,abiFunctionSignature,abiParameters}=await req.json() as{walletId?:string;contractAddress?:string;abiFunctionSignature?:string;abiParameters?:string[]}
+    const{walletId,walletAddress:walletAddrParam,contractAddress,abiFunctionSignature,abiParameters}=await req.json() as{walletId?:string;walletAddress?:string;contractAddress?:string;abiFunctionSignature?:string;abiParameters?:string[]}
     if(!walletId||!contractAddress||!abiFunctionSignature)return j({error:'walletId, contractAddress, abiFunctionSignature required'},400)
 
     const apiKey=Deno.env.get('CIRCLE_API_KEY')!
@@ -74,22 +74,25 @@ Deno.serve(async(req)=>{
       if (amount === '__FETCH__') {
         try {
           const RPC = 'https://rpc.testnet.arc.io'
-          // KasaSavings.balances(address) — selector keccak256("balances(address)")[0:4]
-          // selector = 0x27e235e3
-          const walletRes = await fetch(`https://api.circle.com/v1/w3s/wallets/${walletId}`, {
-            headers: { 'Authorization': `Bearer ${apiKey}` }
-          })
-          const walletData = await walletRes.json() as { data?: { wallet?: { address?: string } } }
-          const addr = walletData.data?.wallet?.address ?? ''
+          // Use walletAddress from body if provided, else fetch from Circle
+          let addr = walletAddrParam ?? ''
+          if (!addr) {
+            const walletRes = await fetch(`https://api.circle.com/v1/w3s/wallets?pageSize=50`, {
+              headers: { 'Authorization': `Bearer ${apiKey}` }
+            })
+            const walletData = await walletRes.json() as { data?: { wallets?: Array<{id:string;address:string}> } }
+            addr = walletData.data?.wallets?.find(w => w.id === walletId)?.address ?? ''
+          }
           if (addr) {
-            const paddedAddr = addr.toLowerCase().replace('0x','').padStart(64,'0')
+            const paddedAddr = addr.toLowerCase().replace('0x', '').padStart(64, '0')
             const rpcRes = await fetch(RPC, {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ jsonrpc:'2.0', id:1, method:'eth_call', params:[{ to: contractAddress, data: '0x27e235e3' + paddedAddr }, 'latest'] })
+              body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to: contractAddress, data: '0x27e235e3' + paddedAddr }, 'latest'] })
             })
             const rpcData = await rpcRes.json() as { result?: string }
             if (rpcData.result && rpcData.result !== '0x') {
-              amount = (BigInt(rpcData.result) / BigInt(1e6)).toString() + '.00'
+              const raw = BigInt(rpcData.result)
+              amount = (Number(raw) / 1e6).toFixed(2)
             }
           }
         } catch { amount = '?' }
