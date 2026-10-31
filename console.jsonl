@@ -1453,3 +1453,20 @@
 {"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793425995970}
 {"level":"debug","message":"[vite] hot updated: /src/components/AuthScreen.tsx","timestamp":1793425995972}
 {"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793425995972}
+{"level":"debug","message":"[vite] connected.","timestamp":1793426084727}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793426381389}
+{"level":"debug","message":"[vite] connected.","timestamp":1793426388215}
+{"level":"debug","message":"[vite] hot updated: /src/components/InternalSend.tsx","timestamp":1793426481597}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793426481597}
+{"level":"debug","message":"[vite] hot updated: /src/components/InternalSend.tsx","timestamp":1793426484715}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793426484715}
+{"level":"debug","message":"[vite] hot updated: /src/components/InternalSend.tsx","timestamp":1793426489533}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793426489533}
+{"level":"debug","message":"[vite] hot updated: /src/components/InternalSend.tsx","timestamp":1793426492393}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793426492393}
+{"level":"debug","message":"[vite] hot updated: /src/components/InternalSend.tsx","timestamp":1793426497756}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793426497756}
+{"level":"debug","message":"[vite] hot updated: /src/components/InternalSend.tsx","timestamp":1793426501287}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793426501287}
+{"level":"debug","message":"[vite] hot updated: /src/components/InternalSend.tsx","timestamp":1793426504770}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793426504770}

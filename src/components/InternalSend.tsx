@@ -74,9 +74,11 @@ export default function InternalSend({ walletId, walletAddress, email }: Props) 
       if (to.startsWith('@') || (!to.startsWith('0x') && to.length > 1)) {
         const uname = to.replace(/^@/, '').toLowerCase()
         const lookup = await apiFetch(`/api/registry/lookup?username=${encodeURIComponent(uname)}`)
-        if (!lookup.ok) throw new Error(`@${uname} not found in registry`)
-        const data = await lookup.json() as { address?: string }
-        if (!data.address) throw new Error(`@${uname} has no wallet`)
+        const data = await lookup.json() as { address?: string; error?: string }
+        const ZERO = '0x0000000000000000000000000000000000000000'
+        if (!lookup.ok || !data.address || data.address === ZERO) {
+          throw new Error(`@${uname} is not registered on Kasa yet`)
+        }
         resolvedTo = data.address
       }
       const parsed = parseAmount(ARC_TESTNET_ID, amount)
@@ -204,8 +206,8 @@ export default function InternalSend({ walletId, walletAddress, email }: Props) 
           </button>
           <button onClick={() => void handleVerifyConfirm()} disabled={verifying || confirmCode.length < 6}
             style={{ flex: 2, height: '44px', borderRadius: '14px', border: 'none',
-              background: (!verifying && confirmCode.length === 6) ? 'var(--acc)' : 'rgba(255,255,255,.12)',
-              color: (!verifying && confirmCode.length === 6) ? '#0b0b0c' : 'rgba(255,255,255,.3)',
+              background: (!verifying && confirmCode.length === 6) ? 'var(--acc)' : 'var(--surface-muted)',
+              color: (!verifying && confirmCode.length === 6) ? 'var(--accent-fg)' : 'var(--t3)',
               fontWeight: 700, fontSize: '14px', cursor: (!verifying && confirmCode.length === 6) ? 'pointer' : 'not-allowed',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
             {verifying ? <Loader2 style={{ width: '15px', height: '15px', animation: 'spin 1s linear infinite' }} /> : null}
@@ -232,7 +234,7 @@ export default function InternalSend({ walletId, walletAddress, email }: Props) 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
           <label style={{ ...labelStyle, marginBottom: 0 }}>TO</label>
           <button onClick={() => setShowPicker(v => !v)}
-            style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '8px', background: showPicker ? 'rgba(232,255,31,.15)' : 'rgba(255,255,255,.06)', border: `1px solid ${showPicker ? 'rgba(232,255,31,.3)' : 'rgba(255,255,255,.1)'}`, color: showPicker ? 'var(--acc)' : 'rgba(255,255,255,.5)', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>
+            style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '8px', background: showPicker ? 'rgba(91,80,240,.1)' : 'var(--surface-muted)', border: `1px solid ${showPicker ? 'rgba(91,80,240,.3)' : 'var(--border)'}`, color: showPicker ? 'var(--acc)' : 'var(--t2)', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>
             {showPicker ? <X style={{ width: 11, height: 11 }} /> : <BookUser style={{ width: 11, height: 11 }} />}
             {showPicker ? 'Close' : 'Contacts'}
           </button>
@@ -240,7 +242,7 @@ export default function InternalSend({ walletId, walletAddress, email }: Props) 
 
         {/* Contact picker dropdown */}
         {showPicker && (
-          <div style={{ marginBottom: '10px', padding: '12px', borderRadius: '14px', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(108,99,255,.2)' }}>
+          <div style={{ marginBottom: '10px', padding: '12px', borderRadius: '14px', background: 'var(--surface)', border: '1px solid rgba(91,80,240,.2)' }}>
             <Contacts walletId={walletId} pickerMode onSelect={c => {
               setSelectedContact(c)
               setTo(c.address)
@@ -251,13 +253,13 @@ export default function InternalSend({ walletId, walletAddress, email }: Props) 
 
         {/* Selected contact badge */}
         {selectedContact && !showPicker && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '10px', background: 'rgba(108,99,255,.10)', border: '1px solid rgba(232,255,31,.2)', marginBottom: '8px' }}>
-            <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'rgba(232,255,31,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: 'var(--acc)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '10px', background: 'rgba(91,80,240,.08)', border: '1px solid rgba(91,80,240,.2)', marginBottom: '8px' }}>
+            <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'rgba(91,80,240,.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: 'var(--acc)', flexShrink: 0 }}>
               {selectedContact.name.charAt(0).toUpperCase()}
             </div>
             <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--acc)', flex: 1 }}>{selectedContact.name}</span>
             <button onClick={() => { setSelectedContact(null); setTo('') }}
-              style={{ padding: '2px', background: 'transparent', border: 'none', color: 'rgba(232,255,31,.5)', cursor: 'pointer' }}>
+              style={{ padding: '2px', background: 'transparent', border: 'none', color: 'var(--t3)', cursor: 'pointer' }}>
               <X style={{ width: 13, height: 13 }} />
             </button>
           </div>
@@ -266,7 +268,7 @@ export default function InternalSend({ walletId, walletAddress, email }: Props) 
         <input type="text" value={to} onChange={e => { setTo(e.target.value.trim()); if (selectedContact) setSelectedContact(null) }}
           placeholder="0x… address" style={inputStyle} />
         {to && !isAddress(to) && !isUsername && <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--danger)' }}>Enter a valid address or @username</p>}
-        {isUsername && <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'rgba(232,255,31,.7)' }}>Resolves via Kasa Registry</p>}
+        {isUsername && <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--acc)' }}>Resolves via Kasa Registry</p>}
       </div>
 
       <div>
@@ -284,8 +286,8 @@ export default function InternalSend({ walletId, walletAddress, email }: Props) 
 
       <button onClick={() => void handleSend()} disabled={!canSend}
         style={{ width: '100%', height: '48px', borderRadius: '16px',
-          background: canSend ? 'var(--acc)' : 'rgba(255,255,255,.12)',
-          border: 'none', color: canSend ? '#0b0b0c' : 'var(--t3)',
+          background: canSend ? 'var(--acc)' : 'var(--surface-muted)',
+          border: canSend ? 'none' : '1px solid var(--border)', color: canSend ? 'var(--accent-fg)' : 'var(--t3)',
           fontWeight: 700, fontSize: '14px', cursor: canSend ? 'pointer' : 'not-allowed',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all .2s' }}>
         {sending
