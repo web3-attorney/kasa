@@ -64,7 +64,18 @@ Deno.serve(async(req)=>{
     const txData=await txRes.json() as{data?:{id:string};message?:string;errors?:unknown[]}
     if(!txData.data?.id) return j({error:txData.message??'No txId',detail:txData},400)
 
-    const txId = txData.data.id
+    const circleId = txData.data.id
+
+    // Poll for real onchain hash (Arc confirms in <1s; give up after 30s)
+    let txId = circleId
+    for (let i = 0; i < 15; i++) {
+      await new Promise(res => setTimeout(res, 2000))
+      const sr = await fetch(`https://api.circle.com/v1/w3s/developer/transactions/${circleId}`, { headers: { 'Authorization': `Bearer ${apiKey}` } })
+      const sd = await sr.json() as { data?: { transaction?: { state: string; txHash?: string } } }
+      const tx = sd.data?.transaction
+      if (tx?.txHash) { txId = tx.txHash; break }
+      if (tx?.state === 'FAILED' || tx?.state === 'CANCELLED') break
+    }
 
     // Write tx_history record for save/withdraw actions
     const meta = txMeta(abiFunctionSignature, abiParameters ?? [], contractAddress, SAVINGS)
