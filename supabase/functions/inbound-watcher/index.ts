@@ -96,10 +96,15 @@ Deno.serve(async (req) => {
     }
 
     // If any new inbound txs were found, trigger autosave-watcher for this wallet
-    // so auto-deposit fires immediately rather than waiting for pg_cron
+    // Pass total inbound amount so watcher doesn't rely on balance diff (avoids prevBal=0 skip)
     if (newCount > 0) {
       const SB_URL = Deno.env.get('SUPABASE_URL')!
-      fetch(`${SB_URL}/functions/v1/autosave-watcher?walletId=${encodeURIComponent(walletId)}`, {
+      // Sum all new inbound amounts
+      const totalInbound = completed
+        .filter(tx => !existingHashes.has(tx.txHash!))
+        .reduce((sum, tx) => sum + parseFloat(tx.amounts?.[0] ?? '0'), 0)
+        .toFixed(6)
+      fetch(`${SB_URL}/functions/v1/autosave-watcher?walletId=${encodeURIComponent(walletId)}&inboundAmount=${encodeURIComponent(totalInbound)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!}` },
         body: '{}',

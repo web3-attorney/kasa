@@ -100,6 +100,8 @@ Deno.serve(async (req) => {
     // Optional: filter to one walletId (when called from inbound-watcher)
     const url = new URL(req.url)
     const filterWalletId = url.searchParams.get('walletId') ?? null
+    // Optional: inbound amount in USDC units passed directly by inbound-watcher (bypasses balance diff)
+    const forcedInboundUsdc = url.searchParams.get('inboundAmount') ?? null
 
     // Fetch active, non-deactivated plans
     const plansUrl = filterWalletId
@@ -149,12 +151,19 @@ Deno.serve(async (req) => {
           body: JSON.stringify({ last_balance: currentBal.toString(), updated_at: now })
         })
 
-        if (currentBal <= prevBal || prevBal === 0n) {
-          results.push(`no-inbound:${plan.wallet_id}`)
-          continue
+        // Determine inbound amount: use forced value from inbound-watcher if provided,
+        // otherwise compute from balance diff (skip if prevBal unset or no increase)
+        let inbound: bigint
+        if (forcedInboundUsdc) {
+          inbound = BigInt(Math.round(parseFloat(forcedInboundUsdc) * 1_000_000))
+        } else {
+          if (currentBal <= prevBal || prevBal === 0n) {
+            results.push(`no-inbound:${plan.wallet_id}`)
+            continue
+          }
+          inbound = currentBal - prevBal
         }
 
-        const inbound = currentBal - prevBal
         const saveRaw = (inbound * BigInt(plan.savings_percent)) / 100n
         if (saveRaw === 0n) { results.push(`too-small:${plan.wallet_id}`); continue }
 
