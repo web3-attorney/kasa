@@ -18,6 +18,10 @@ Onchain agent identity registered via ERC-8004 on Arc Testnet + pay-per-call bil
 - KasaSavings contract (Arc Testnet): 0xce160338e23cbd581bfecc8f5857c7c4f686d9b6
 - KasaRegistry contract (Arc Testnet): 0x6a86b61cb3205b8d017186b8ecc9629641c6dd21
 - KasaRouter contract (Arc Testnet): 0x620140d0d4f7e1561800cec34d7c0d4a9f05f101
+- KasaRegistry contract (Arc Mainnet): 0xA0359617449E696F5bb1686fA764575bDB93da40
+- KasaSavings contract (Arc Mainnet): 0x5af9BfcD29Cb296d1111CB9085AcBFd42b291879
+- KasaRouter contract (Arc Mainnet): 0x8e8316759D7891B6420e57Fe6d1b7713b64932c8
+- Deployer wallet (Arc Mainnet): 0x3b0854ddC50af0a98b8E1bAFEc9c215f9953DEE9
 
 ## Tech Stack
 
