@@ -228,7 +228,7 @@ Deno.serve(async (req) => {
 
     if (!wallet) {
       const cr = await circlePost(apiKey, entitySecret, pem, '/w3s/developer/wallets', {
-        accountType: 'EOA', blockchains: [Deno.env.get('ARC_BLOCKCHAIN') ?? 'ARC-MAINNET'], count: 1, walletSetId: wsId,
+        accountType: 'EOA', blockchains: [Deno.env.get('ARC_BLOCKCHAIN_WALLET') ?? 'ARC'], count: 1, walletSetId: wsId,
         metadata: [{ name: `Kasa:${userId}`, refId: userId }],
         idempotencyKey: crypto.randomUUID(),
       }) as { data?: { wallets?: Array<Record<string, unknown>> }; message?: string }
