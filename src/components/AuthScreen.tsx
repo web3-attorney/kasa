@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Fingerprint, Mail, Loader2, ArrowRight, AtSign, CheckCircle2, XCircle } from 'lucide-react'
 import { sendOtp, verifyOtp } from '@/supabase'
-import { getOrCreateWallet, saveSession } from '@/kasaWallet'
+import { getOrCreateWallet, saveSession, apiFetch } from '@/kasaWallet'
 import { toast } from 'sonner'
 
 type Step = 'email' | 'otp' | 'username' | 'wallet'
@@ -38,7 +38,7 @@ export default function AuthScreen({ onAuth }: Props) {
     debounceRef.current = setTimeout(() => {
       void (async () => {
         try {
-          const res = await fetch(`/api/registry/check?username=${encodeURIComponent(username)}`)
+          const res = await apiFetch(`/api/registry/check?username=${encodeURIComponent(username)}`)
           const data = await res.json() as { available: boolean; reason?: string }
           setAvailable(data.available)
           setAvailReason(data.reason ?? '')
@@ -84,7 +84,7 @@ export default function AuthScreen({ onAuth }: Props) {
   }
 
   const handleChooseUsername = async () => {
-    if (!username || available === false) return
+    if (!username || !formatOk || available === false) return
     setLoading(true)
     setStep('wallet')
     try {
@@ -207,7 +207,7 @@ export default function AuthScreen({ onAuth }: Props) {
               {username && !formatOk && <p style={{ margin: 0, fontSize: '12px', color: 'var(--danger)' }}>3–20 chars, letters/numbers/underscore only</p>}
               {!username && <p style={{ margin: 0, fontSize: '12px', color: 'var(--t3)' }}>3–20 characters, letters/numbers/underscore</p>}
             </div>
-            <button onClick={() => void handleChooseUsername()} disabled={loading || available !== true} style={btnStyle(loading || available !== true)}>
+            <button onClick={() => void handleChooseUsername()} disabled={loading || !formatOk || available === false} style={btnStyle(loading || !formatOk || available === false)}>
               {loading ? <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} /> : <><ArrowRight style={{ width: 16, height: 16 }} />Continue</>}
             </button>
           </>

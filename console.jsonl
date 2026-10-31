@@ -1431,3 +1431,25 @@
 {"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793425600315}
 {"level":"debug","message":"[vite] connected.","timestamp":1793425672821}
 {"level":"debug","message":"[vite] connected.","timestamp":1793425879763}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793425907869}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793425909884}
+{"level":"debug","message":"[vite] connected.","timestamp":1793425912267}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793425969467}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793425969468}
+{"level":"debug","message":"[vite] connected.","timestamp":1793425974228}
+{"level":"debug","message":"[vite] hot updated: /src/components/AuthScreen.tsx","timestamp":1793425983419}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793425983419}
+{"level":"debug","message":"[vite] hot updated: /src/components/AuthScreen.tsx","timestamp":1793425983419}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793425983419}
+{"level":"debug","message":"[vite] hot updated: /src/components/AuthScreen.tsx","timestamp":1793425986325}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793425986325}
+{"level":"debug","message":"[vite] hot updated: /src/components/AuthScreen.tsx","timestamp":1793425986333}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793425986333}
+{"level":"debug","message":"[vite] hot updated: /src/components/AuthScreen.tsx","timestamp":1793425989785}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793425989786}
+{"level":"debug","message":"[vite] hot updated: /src/components/AuthScreen.tsx","timestamp":1793425989786}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793425989786}
+{"level":"debug","message":"[vite] hot updated: /src/components/AuthScreen.tsx","timestamp":1793425995970}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793425995970}
+{"level":"debug","message":"[vite] hot updated: /src/components/AuthScreen.tsx","timestamp":1793425995972}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793425995972}
