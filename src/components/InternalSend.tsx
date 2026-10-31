@@ -109,7 +109,21 @@ export default function InternalSend({ walletId, walletAddress, email }: Props) 
       }
 
       if (!res.ok) throw new Error(data.error ?? 'Transaction failed')
-      setTxHash(data.txHash ?? data.txId ?? '')
+
+      // Poll tx-status to get the real onchain hash (Circle returns a txId first, hash comes after COMPLETE)
+      let onchainHash = data.txHash ?? data.txId ?? ''
+      if (data.txId && !data.txHash) {
+        for (let i = 0; i < 20; i++) {
+          await new Promise(r => setTimeout(r, 2000))
+          try {
+            const sr = await apiFetch(`/api/tx-status?txId=${data.txId}`)
+            const sd = await sr.json() as { state?: string; txHash?: string }
+            if (sd.txHash) { onchainHash = sd.txHash; break }
+            if (sd.state === 'FAILED' || sd.state === 'CANCELLED') break
+          } catch { break }
+        }
+      }
+      setTxHash(onchainHash)
       toast.success(`Sent ${amount} USDC${memo ? ` · "${memo}"` : ''}`)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Transaction failed')
