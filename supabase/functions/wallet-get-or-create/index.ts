@@ -7,9 +7,106 @@ const j = (d: unknown, s = 200) => new Response(JSON.stringify(d), { status: s, 
 const e = (m: string, s = 400) => j({ error: m }, s)
 
 const REGISTRY = '0x6a86b61cb3205b8d017186b8ecc9629641c6dd21'
-const ARC_RPC = 'https://rpc.testnet.arc.io'
+const RPC = 'https://rpc.testnet.arc.io'
 
-// RSA-OAEP SHA-256 encryption matching Circle SDK exactly
+// ── Keccak-256 pure TypeScript (no imports) ───────────────────────────────────
+// RC: https://github.com/nicowillis/keccak in public domain
+const RC: bigint[] = [
+  0x0000000000000001n,0x0000000000008082n,0x800000000000808An,0x8000000080008000n,
+  0x000000000000808Bn,0x0000000080000001n,0x8000000080008081n,0x8000000000008009n,
+  0x000000000000008An,0x0000000000000088n,0x0000000080008009n,0x000000008000000An,
+  0x000000008000808Bn,0x800000000000008Bn,0x8000000000008089n,0x8000000000008003n,
+  0x8000000000008002n,0x8000000000000080n,0x000000000000800An,0x800000008000000An,
+  0x8000000080008081n,0x8000000000008080n,0x0000000080000001n,0x8000000080008008n,
+]
+const ROTC = [1,3,6,10,15,21,28,36,45,55,2,14,27,41,56,8,25,43,62,18,39,61,20,44]
+const PI = [10,7,11,17,18,3,5,16,8,21,24,4,15,23,19,13,12,2,20,14,22,9,6,1]
+
+function rot64(v: bigint, n: number): bigint {
+  return ((v << BigInt(n)) | (v >> BigInt(64 - n))) & 0xFFFFFFFFFFFFFFFFn
+}
+
+function keccakF(s: bigint[]): void {
+  for (let r = 0; r < 24; r++) {
+    // Theta
+    const c = [0,1,2,3,4].map(i => s[i]^s[i+5]^s[i+10]^s[i+15]^s[i+20])
+    const d = c.map((_, i) => c[(i+4)%5] ^ rot64(c[(i+1)%5], 1))
+    for (let i = 0; i < 25; i++) s[i] ^= d[i%5]
+    // Rho + Pi
+    let last = s[1]; let j = 0
+    for (let i = 0; i < 24; i++) { const tmp = s[PI[i]]; s[PI[i]] = rot64(last, ROTC[i]); last = tmp; j = i }
+    void j
+    // Chi
+    for (let i = 0; i < 25; i += 5) {
+      const a = s.slice(i, i+5)
+      for (let k = 0; k < 5; k++) s[i+k] = a[k] ^ (~a[(k+1)%5] & a[(k+2)%5])
+    }
+    s[0] ^= RC[r]
+  }
+}
+
+function keccak256(data: Uint8Array): string {
+  const rate = 136 // 1088 bits / 8
+  const padded = new Uint8Array(Math.ceil((data.length + 1) / rate) * rate)
+  padded.set(data)
+  padded[data.length] = 0x01
+  padded[padded.length - 1] ^= 0x80
+  const state: bigint[] = Array(25).fill(0n)
+  for (let i = 0; i < padded.length; i += rate) {
+    for (let j = 0; j < rate / 8; j++) {
+      let w = 0n
+      for (let k = 0; k < 8; k++) w |= BigInt(padded[i + j*8 + k]) << BigInt(k*8)
+      state[j] ^= w
+    }
+    keccakF(state)
+  }
+  let hex = '0x'
+  for (let i = 0; i < 4; i++) {
+    const w = state[i]
+    for (let k = 0; k < 8; k++) hex += ((Number((w >> BigInt(k*8)) & 0xFFn)).toString(16).padStart(2, '0'))
+  }
+  return hex
+}
+
+function keccak256Packed(username: string, saltHex: string): string {
+  const usernameBytes = new TextEncoder().encode(username)
+  const saltStripped = saltHex.replace('0x', '')
+  const saltBytes = new Uint8Array(32)
+  for (let i = 0; i < 32; i++) saltBytes[i] = parseInt(saltStripped.slice(i * 2, i * 2 + 2), 16)
+  const packed = new Uint8Array(usernameBytes.length + 32)
+  packed.set(usernameBytes, 0)
+  packed.set(saltBytes, usernameBytes.length)
+  return keccak256(packed)
+}
+
+// ABI encode resolve(string) calldata
+function encodeResolveCall(username: string): string {
+  // selector: keccak256("resolve(string)")[0:4] — precomputed
+  const selector = '461a4478'
+  const strBytes = new TextEncoder().encode(username)
+  const offset = '0000000000000000000000000000000000000000000000000000000000000020'
+  const len = strBytes.length.toString(16).padStart(64, '0')
+  const dataHex = Array.from(strBytes).map(b => b.toString(16).padStart(2, '0')).join('')
+  const padded = dataHex.padEnd(Math.ceil(strBytes.length / 32) * 64, '0')
+  return '0x' + selector + offset + len + padded
+}
+
+function decodeAddressResult(hex: string): string {
+  if (!hex || hex === '0x') return '0x0000000000000000000000000000000000000000'
+  return '0x' + hex.slice(-40)
+}
+
+// ── RPC + Circle helpers ──────────────────────────────────────────────────────
+async function rpcCall(method: string, params: unknown[]) {
+  const r = await fetch(RPC, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params })
+  })
+  const d = await r.json() as { result?: string }
+  return d.result
+}
+
 async function encrypt(entitySecret: string, publicKeyPem: string): Promise<string> {
   const pem = publicKeyPem.replace(/-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----|\s+/g, '')
   const t = atob(pem)
@@ -28,7 +125,9 @@ async function circleGet(apiKey: string, path: string) {
   return r.json()
 }
 
-async function circlePost(apiKey: string, cipher: string, path: string, body: Record<string, unknown>) {
+// Always re-encrypt to get a fresh ciphertext — Circle rejects reused ciphertexts
+async function circlePost(apiKey: string, entitySecret: string, pem: string, path: string, body: Record<string, unknown>) {
+  const cipher = await encrypt(entitySecret, pem)
   const r = await fetch(`https://api.circle.com/v1${path}`, {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
@@ -37,164 +136,63 @@ async function circlePost(apiKey: string, cipher: string, path: string, body: Re
   return r.json()
 }
 
-// ABI-encode a string argument for eth_call
-function encodeStringCall(selector: string, str: string): string {
-  const enc = new TextEncoder().encode(str)
-  const len = enc.length
-  // selector (4 bytes) + offset (32) + length (32) + data (padded to 32)
-  const padded = Math.ceil(len / 32) * 32
-  const buf = new Uint8Array(4 + 32 + 32 + padded)
-  // selector
-  const selBytes = selector.match(/.{2}/g)!.map(h => parseInt(h, 16))
-  buf.set(selBytes, 0)
-  // offset = 32 (big-endian in last byte of the 32-byte slot)
-  buf[35] = 32
-  // length
-  const lenHex = len.toString(16).padStart(64, '0')
-  const lenBytes = lenHex.match(/.{2}/g)!.map(h => parseInt(h, 16))
-  buf.set(lenBytes, 36)
-  // data
-  buf.set(enc, 68)
-  return '0x' + Array.from(buf).map(b => b.toString(16).padStart(2, '0')).join('')
+async function waitForTx(txId: string, apiKey: string, maxWait = 60000): Promise<boolean> {
+  const start = Date.now()
+  while (Date.now() - start < maxWait) {
+    await new Promise(r => setTimeout(r, 3000))
+    const res = await circleGet(apiKey, `/w3s/transactions/${txId}`) as { data?: { transaction?: { state?: string } } }
+    const state = res.data?.transaction?.state
+    if (state === 'COMPLETE') return true
+    if (state === 'FAILED' || state === 'CANCELLED') return false
+  }
+  return false
 }
 
-// keccak256 of a string in pure JS (used for username hash)
-// We use the Ethereum JSON-RPC instead since we can't import keccak in Deno without esm.sh
-async function rpcCall(method: string, params: unknown[]) {
-  const r = await fetch(ARC_RPC, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params })
-  })
-  return (await r.json() as { result: string }).result
-}
-
-// Commit-reveal username registration via Circle contract calls
 async function registerUsernameOnchain(
-  apiKey: string, cipher: string, walletId: string, walletAddress: string, username: string
+  walletId: string, username: string, apiKey: string, entitySecret: string
 ): Promise<void> {
-  // Generate salt (32 random bytes)
-  const saltBytes = crypto.getRandomValues(new Uint8Array(32))
-  const salt = '0x' + Array.from(saltBytes, b => b.toString(16).padStart(2, '0')).join('')
+  const pkData = await circleGet(apiKey, '/w3s/config/entity/publicKey') as { data: { publicKey: string } }
+  const pubKeyPem = pkData.data.publicKey
 
-  // Compute commitment = keccak256(abi.encodePacked(username, salt))
-  // We do this via eth_call to a precompile-free approach: use eth_call with keccak256 opcode via a static call
-  // Simpler: pack username bytes + salt bytes and call keccak256 via RPC
-  const usernameBytes = Array.from(new TextEncoder().encode(username)).map(b => b.toString(16).padStart(2, '0')).join('')
-  const saltHex = salt.slice(2)
-  // abi.encodePacked(string, bytes32) = raw string bytes + salt bytes (no padding)
-  const packed = usernameBytes + saltHex
-  const commitment = await rpcCall('eth_call', [{
-    to: '0x0000000000000000000000000000000000000000',
-    data: '0x' + packed  // This won't work for keccak — use a different approach
-  }, 'latest']).catch(() => '')
+  const saltBytes = new Uint8Array(32)
+  crypto.getRandomValues(saltBytes)
+  const saltHex = '0x' + Array.from(saltBytes).map(b => b.toString(16).padStart(2, '0')).join('')
 
-  // Better: use the eth_sign keccak approach via a known utility
-  // Actually compute keccak256 using a pure-JS implementation
-  const commitmentHash = await computeKeccak256Packed(username, saltBytes)
+  const commitment = keccak256Packed(username, saltHex)
+  console.log('Registering', username, 'commitment:', commitment)
 
-  // Step 1: commit(bytes32 commitment)
-  // selector: keccak256("commit(bytes32)")[0:4] = 0xf14fcbc8
-  const commitCalldata = '0xf14fcbc8' + commitmentHash.slice(2)
-  const commitRes = await circlePost(apiKey, cipher, '/w3s/developer/transactions/contractExecution', {
+  const commitRes = await circlePost(apiKey, entitySecret, pubKeyPem, '/w3s/developer/transactions/contractExecution', {
+    idempotencyKey: crypto.randomUUID(),
     walletId,
     contractAddress: REGISTRY,
-    callData: commitCalldata,
+    abiFunctionSignature: 'commit(bytes32)',
+    abiParameters: [commitment],
     feeLevel: 'MEDIUM',
-    idempotencyKey: crypto.randomUUID(),
   }) as { data?: { id?: string }; message?: string }
 
-  if (!commitRes.data?.id) {
-    console.error('Commit failed:', JSON.stringify(commitRes))
-    return
-  }
+  const commitTxId = commitRes.data?.id
+  if (!commitTxId) { console.error('Commit failed:', JSON.stringify(commitRes).slice(0, 300)); return }
+  console.log('Commit tx:', commitTxId)
 
-  // Wait for commit to confirm (need at least 2 blocks)
-  await new Promise(r => setTimeout(r, 8000))
+  const committed = await waitForTx(commitTxId, apiKey, 45000)
+  if (!committed) { console.error('Commit did not confirm'); return }
+  await new Promise(r => setTimeout(r, 6000)) // wait 2+ blocks
 
-  // Step 2: register(string username, bytes32 salt)
-  // selector: keccak256("register(string,bytes32)")[0:4]
-  const registerSel = await getSelector('register(string,bytes32)')
-  const registerCalldata = encodeRegister(registerSel, username, saltBytes)
-
-  const regRes = await circlePost(apiKey, cipher, '/w3s/developer/transactions/contractExecution', {
+  const registerRes = await circlePost(apiKey, entitySecret, pubKeyPem, '/w3s/developer/transactions/contractExecution', {
+    idempotencyKey: crypto.randomUUID(),
     walletId,
     contractAddress: REGISTRY,
-    callData: registerCalldata,
+    abiFunctionSignature: 'register(string,bytes32)',
+    abiParameters: [username, saltHex],
     feeLevel: 'MEDIUM',
-    idempotencyKey: crypto.randomUUID(),
   }) as { data?: { id?: string }; message?: string }
 
-  if (!regRes.data?.id) {
-    console.error('Register failed:', JSON.stringify(regRes))
-  }
+  const registerTxId = registerRes.data?.id
+  if (!registerTxId) { console.error('Register failed:', JSON.stringify(registerRes).slice(0, 300)); return }
+  console.log('Register tx:', registerTxId)
 }
 
-async function getSelector(sig: string): Promise<string> {
-  // keccak256 of function signature, first 4 bytes
-  const bytes = new TextEncoder().encode(sig)
-  const hash = await crypto.subtle.digest('SHA-256', bytes) // SHA-256 not keccak, but let's use RPC
-  // Use eth_call to a fake address just to get keccak256 — not possible without a contract
-  // Use the known selectors instead
-  const known: Record<string, string> = {
-    'commit(bytes32)': 'f14fcbc8',
-    'register(string,bytes32)': '60c7e39c',
-    'resolve(string)': '461a4478',
-  }
-  return known[sig] ? '0x' + known[sig] : '0x00000000'
-}
-
-async function computeKeccak256Packed(username: string, salt: Uint8Array): Promise<string> {
-  // abi.encodePacked(username, salt) = utf8(username) + salt
-  const usernameBytes = new TextEncoder().encode(username)
-  const packed = new Uint8Array(usernameBytes.length + 32)
-  packed.set(usernameBytes, 0)
-  packed.set(salt, usernameBytes.length)
-
-  // Compute keccak256 via eth_call to a contract that does keccak256(data)
-  // We'll use the precompile approach: call the RPC with eth_call and data hash
-  // Simplest: use the RPC keccak method
-  const hex = '0x' + Array.from(packed, b => b.toString(16).padStart(2, '0')).join('')
-  const result = await rpcCall('eth_call', [{
-    to: null,
-    // keccak256 is not callable via eth_call directly
-    // Use web3_sha3 which IS the keccak256 RPC method
-  }, 'latest']).catch(() => '')
-
-  // Use web3_sha3 instead
-  const sha3Result = await fetch(ARC_RPC, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'web3_sha3', params: [hex] })
-  }).then(r => r.json()).then((r: { result: string }) => r.result)
-
-  return sha3Result
-}
-
-function encodeRegister(selector: string, username: string, salt: Uint8Array): string {
-  // register(string username, bytes32 salt)
-  // ABI encoding: selector + offset_username(32) + salt(32) + len_username(32) + username_padded
-  const enc = new TextEncoder().encode(username)
-  const len = enc.length
-  const padded = Math.ceil(len / 32) * 32
-
-  const buf = new Uint8Array(4 + 32 + 32 + 32 + padded)
-  const selBytes = selector.slice(2).match(/.{2}/g)!.map(h => parseInt(h, 16))
-  buf.set(selBytes, 0)
-  // offset for string = 64 (after the selector+offset+salt = 4+32+32 = 68, but offset counts from after selector)
-  buf[35] = 64  // 0x40 = 64
-  // salt (32 bytes) at position 36
-  buf.set(salt, 36)
-  // string length at position 68
-  const lenBytes = new Uint8Array(32)
-  lenBytes[31] = len
-  buf.set(lenBytes, 68)
-  // string data at position 100
-  buf.set(enc, 100)
-
-  return '0x' + Array.from(buf, b => b.toString(16).padStart(2, '0')).join('')
-}
-
+// ── Main handler ─────────────────────────────────────────────────────────────
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
   try {
@@ -207,45 +205,37 @@ Deno.serve(async (req) => {
     const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const sbH = { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Accept': 'application/json', 'Content-Type': 'application/json' }
 
-    // Check existing profile
     const pr = await (await fetch(`${SB_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&limit=1`, { headers: sbH })).json() as Record<string, unknown>[]
     const existingProfile = pr[0]
     const finalUsername = (existingProfile?.username as string) ?? requestedUsername
     if (!finalUsername) return e('username required for new users')
 
-    // Get Circle public key + cipher once
     const pkData = await circleGet(apiKey, '/w3s/config/entity/publicKey') as { data: { publicKey: string } }
-    const cipher = await encrypt(entitySecret, pkData.data.publicKey)
+    const pem = pkData.data.publicKey
 
-    // Get or create wallet set
     const wsRes = await circleGet(apiKey, '/w3s/walletSets?pageSize=1') as { data?: { walletSets?: Array<{ id: string }> } }
     let wsId = wsRes.data?.walletSets?.[0]?.id
     if (!wsId) {
-      const cr = await circlePost(apiKey, cipher, '/w3s/walletSets', { name: 'Kasa Users', idempotencyKey: crypto.randomUUID() }) as { data?: { walletSet?: { id: string } } }
+      const cr = await circlePost(apiKey, entitySecret, pem, '/w3s/walletSets', { name: 'Kasa Users', idempotencyKey: crypto.randomUUID() }) as { data?: { walletSet?: { id: string } } }
       wsId = cr.data?.walletSet?.id
     }
     if (!wsId) return e('Wallet set unavailable')
 
-    // Find existing wallet by refId
     const wlRes = await circleGet(apiKey, `/w3s/wallets?walletSetId=${wsId}&pageSize=50`) as { data?: { wallets?: Array<Record<string, unknown>> } }
     const wallets = wlRes.data?.wallets ?? []
     let wallet = wallets.find(w => w.refId === userId)
-    const isNew = !wallet && !existingProfile
+    const isNew = !wallet
 
     if (!wallet) {
-      const cr = await circlePost(apiKey, cipher, '/w3s/developer/wallets', {
-        accountType: 'EOA',
-        blockchains: ['ARC-TESTNET'],
-        count: 1,
-        walletSetId: wsId,
+      const cr = await circlePost(apiKey, entitySecret, pem, '/w3s/developer/wallets', {
+        accountType: 'EOA', blockchains: ['ARC-TESTNET'], count: 1, walletSetId: wsId,
         metadata: [{ name: `Kasa:${userId}`, refId: userId }],
         idempotencyKey: crypto.randomUUID(),
-      }) as { data?: { wallets?: Array<Record<string, unknown>> }; message?: string; code?: number }
+      }) as { data?: { wallets?: Array<Record<string, unknown>> }; message?: string }
       wallet = cr.data?.wallets?.[0]
       if (!wallet) return e(`Wallet creation failed: ${cr.message ?? 'unknown'}`)
     }
 
-    // Save profile
     if (!existingProfile) {
       await fetch(`${SB_URL}/rest/v1/profiles`, {
         method: 'POST',
@@ -254,10 +244,46 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Register username onchain for new users (fire-and-forget, don't block response)
-    if (isNew && wallet.address) {
-      registerUsernameOnchain(apiKey, cipher, wallet.id as string, wallet.address as string, finalUsername)
-        .catch(err => console.error('Username registration error:', err))
+    // Fund new wallets with 1 USDC from dev wallet so they can pay gas
+    if (isNew) {
+      const devWalletId = Deno.env.get('DEV_WALLET_ID')
+      if (devWalletId) {
+        const fundRes = await circlePost(apiKey, entitySecret, pem, '/w3s/developer/transactions/transfer', {
+          idempotencyKey: crypto.randomUUID(),
+          sourceWalletId: devWalletId,
+          destinationAddress: wallet.address as string,
+          amounts: ['1'],
+          tokenAddress: '0x3600000000000000000000000000000000000000',
+          blockchain: 'ARC-TESTNET',
+          feeLevel: 'MEDIUM',
+        }) as { data?: { id?: string }; message?: string }
+        console.log('Fund tx:', fundRes.data?.id ?? fundRes.message)
+        // Wait for fund to confirm before registering username
+        if (fundRes.data?.id) {
+          await waitForTx(fundRes.data.id, apiKey, 60000)
+          await new Promise(r => setTimeout(r, 3000))
+        }
+      }
+    }
+
+    // Check onchain registration, register if not yet done
+    const callData = encodeResolveCall(finalUsername)
+    const onchainResult = await rpcCall('eth_call', [{ to: REGISTRY, data: callData }, 'latest'])
+    const registeredAddr = decodeAddressResult(onchainResult ?? '')
+    const ZERO = '0x' + '0'.repeat(40)
+
+    if (registeredAddr.toLowerCase() === ZERO) {
+      console.log(finalUsername, 'not registered — starting commit-reveal')
+      // Call register-username function synchronously for new users (they're waiting anyway)
+      const SB_URL = Deno.env.get('SUPABASE_URL')!
+      fetch(`${SB_URL}/functions/v1/register-username`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!}` },
+        body: JSON.stringify({ walletId: wallet.id, username: finalUsername })
+      }).then(r => r.json()).then(d => console.log('register-username result:', JSON.stringify(d).slice(0,100)))
+        .catch(err => console.error('register-username error:', err))
+    } else {
+      console.log(finalUsername, 'already registered at', registeredAddr)
     }
 
     const payload = btoa(JSON.stringify({ userId, walletId: wallet.id, exp: Math.floor(Date.now() / 1000) + 2592000 }))

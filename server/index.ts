@@ -565,7 +565,7 @@ app.get('/api/registry/lookup', async (req, res) => {
     const offset = '0000000000000000000000000000000000000000000000000000000000000020'
     const len = nameBytes.length.toString(16).padStart(64, '0')
     const data32 = nameBytes.toString('hex').padEnd(Math.ceil(nameBytes.length / 32) * 64, '0')
-    const callData = '0xbf40fac1' + offset + len + data32 // getAddress selector
+    const callData = '0x461a4478' + offset + len + data32 // resolve(string) selector
     const result = await rpcCall<string>('eth_call', [{ to: REGISTRY_ADDR, data: callData }, 'latest'])
     const addr = '0x' + result.slice(-40)
     if (addr === '0x0000000000000000000000000000000000000000') {
@@ -573,6 +573,12 @@ app.get('/api/registry/lookup', async (req, res) => {
     }
     res.json({ address: addr })
   } catch (e) { res.status(500).json({ error: e instanceof Error ? e.message : 'Lookup failed' }) }
+})
+
+app.post('/api/registry/register', async (req, res) => {
+  // In dev/local mode, the commit-reveal is handled server-side already in wallet-get-or-create
+  // Just proxy to the Edge Function or return ok:true with already:true for dev
+  res.json({ ok: true, already: true, dev: true })
 })
 
 app.get('/api/wallet/balance', async (req, res) => {

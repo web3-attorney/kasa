@@ -67,6 +67,7 @@ const ROUTE_MAP: Record<string, string> = {
   '/api/limits/send-confirm':    'limits',
   '/api/limits/verify-confirm':  'limits',
   '/api/tx-status':              'tx-status',
+  '/api/registry/register':     'register-username',
 }
 
 export function apiUrl(path: string): string {
@@ -144,6 +145,20 @@ export async function sendUsdc(walletId: string, toAddress: string, amountRaw: b
   // If pending (production), poll for completion
   if (data.pending && data.txId) return pollUntilComplete(data.txId)
   return data.txHash ?? data.txId ?? ''
+}
+
+// ── Username registration (fire and forget after login) ───────────────────────
+
+export function triggerUsernameRegistration(walletId: string, username: string): void {
+  fetch(apiUrl('/api/registry/register'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ walletId, username }),
+  }).then(r => r.json()).then((d: Record<string, unknown>) => {
+    if (d.ok) console.log(`[kasa] @${username} registered onchain`)
+    else if (d.already) console.log(`[kasa] @${username} already registered`)
+    else console.warn('[kasa] register-username:', d['error'])
+  }).catch(() => { /* non-fatal — will retry on next login */ })
 }
 
 // ── Contract call ─────────────────────────────────────────────────────────────

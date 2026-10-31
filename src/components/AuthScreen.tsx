@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Fingerprint, Mail, Loader2, ArrowRight, AtSign, CheckCircle2, XCircle } from 'lucide-react'
 import { sendOtp, verifyOtp } from '@/supabase'
-import { getOrCreateWallet, saveSession, apiFetch } from '@/kasaWallet'
+import { getOrCreateWallet, saveSession, apiFetch, triggerUsernameRegistration } from '@/kasaWallet'
 import { toast } from 'sonner'
 
 type Step = 'email' | 'otp' | 'username' | 'wallet'
@@ -70,6 +70,7 @@ export default function AuthScreen({ onAuth }: Props) {
         setStep('wallet')
         const { walletId, address, token, username: confirmedUsername } = await getOrCreateWallet(uid, existingUsername)
         saveSession(uid, confirmedUsername, walletId, address, email.trim().toLowerCase(), token)
+        triggerUsernameRegistration(walletId, confirmedUsername)
         onAuth(uid, confirmedUsername, walletId, address, email.trim().toLowerCase())
       } else {
         // New user — show username picker
@@ -90,6 +91,7 @@ export default function AuthScreen({ onAuth }: Props) {
     try {
       const { walletId, address, token, username: confirmedUsername } = await getOrCreateWallet(userId, username)
       saveSession(userId, confirmedUsername, walletId, address, email.trim().toLowerCase(), token)
+      triggerUsernameRegistration(walletId, confirmedUsername)
       onAuth(userId, confirmedUsername, walletId, address, email.trim().toLowerCase())
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Wallet creation failed')
