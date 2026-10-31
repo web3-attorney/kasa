@@ -1315,3 +1315,82 @@
 {"level":"debug","message":"[vite] hot updated: /src/components/AutoSave.tsx","timestamp":1793397663249}
 {"level":"debug","message":"[vite] hot updated: /src/components/PaymentRequest.tsx","timestamp":1793397663249}
 {"level":"debug","message":"[vite] hot updated: /src/components/FxRouter.tsx","timestamp":1793397663249}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793397928193}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793397928194}
+{"level":"debug","message":"[vite] connected.","timestamp":1793397951507}
+{"level":"debug","message":"[vite] connected.","timestamp":1793397967532}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793398008633}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793398008658}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793400163163}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793400539351}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793400919920}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793401101353}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793402664830}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793402664832}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793402944685}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793402944699}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793402944705}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793403084978}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793403084990}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793403123855}
+{"level":"debug","message":"[vite] connected.","timestamp":1793404091861}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793404332788}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793424898251}
+{"level":"log","message":"[vite] server connection lost. Polling for restart...","timestamp":1793424898252}
+{"level":"debug","message":"[vite] connected.","timestamp":1793424910910}
+{"level":"debug","message":"[vite] connected.","timestamp":1793424914892}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793424945253}
+{"level":"debug","message":"[vite] hot updated: /src/App.tsx","timestamp":1793424945254}
+{"level":"debug","message":"[vite] hot updated: /src/components/AutoSave.tsx","timestamp":1793424945256}
+{"level":"debug","message":"[vite] hot updated: /src/components/ScheduledPayments.tsx","timestamp":1793424945257}
+{"level":"debug","message":"[vite] hot updated: /src/components/PaymentRequest.tsx","timestamp":1793424945257}
+{"level":"debug","message":"[vite] hot updated: /src/components/FxRouter.tsx","timestamp":1793424945257}
+{"level":"debug","message":"[vite] hot updated: /src/components/InternalSend.tsx","timestamp":1793424945257}
+{"level":"debug","message":"[vite] hot updated: /src/components/AuthScreen.tsx","timestamp":1793424945258}
+{"level":"debug","message":"[vite] hot updated: /src/components/TransactionHistory.tsx","timestamp":1793424945258}
+{"level":"debug","message":"[vite] hot updated: /src/components/SpendingLimits.tsx","timestamp":1793424945258}
+{"level":"debug","message":"[vite] hot updated: /src/components/Contacts.tsx","timestamp":1793424945258}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793424946099}
+{"level":"debug","message":"[vite] hot updated: /src/App.tsx","timestamp":1793424946099}
+{"level":"debug","message":"[vite] hot updated: /src/components/AutoSave.tsx","timestamp":1793424946100}
+{"level":"debug","message":"[vite] hot updated: /src/components/ScheduledPayments.tsx","timestamp":1793424946100}
+{"level":"debug","message":"[vite] hot updated: /src/components/PaymentRequest.tsx","timestamp":1793424946100}
+{"level":"debug","message":"[vite] hot updated: /src/components/FxRouter.tsx","timestamp":1793424946100}
+{"level":"debug","message":"[vite] hot updated: /src/components/InternalSend.tsx","timestamp":1793424946100}
+{"level":"debug","message":"[vite] hot updated: /src/components/AuthScreen.tsx","timestamp":1793424946100}
+{"level":"debug","message":"[vite] hot updated: /src/components/TransactionHistory.tsx","timestamp":1793424946100}
+{"level":"debug","message":"[vite] hot updated: /src/components/SpendingLimits.tsx","timestamp":1793424946100}
+{"level":"debug","message":"[vite] hot updated: /src/components/Contacts.tsx","timestamp":1793424946100}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793424953163}
+{"level":"debug","message":"[vite] hot updated: /src/App.tsx","timestamp":1793424953163}
+{"level":"debug","message":"[vite] hot updated: /src/components/AutoSave.tsx","timestamp":1793424953164}
+{"level":"debug","message":"[vite] hot updated: /src/components/ScheduledPayments.tsx","timestamp":1793424953164}
+{"level":"debug","message":"[vite] hot updated: /src/components/PaymentRequest.tsx","timestamp":1793424953164}
+{"level":"debug","message":"[vite] hot updated: /src/components/FxRouter.tsx","timestamp":1793424953164}
+{"level":"debug","message":"[vite] hot updated: /src/components/InternalSend.tsx","timestamp":1793424953164}
+{"level":"debug","message":"[vite] hot updated: /src/components/AuthScreen.tsx","timestamp":1793424953164}
+{"level":"debug","message":"[vite] hot updated: /src/components/TransactionHistory.tsx","timestamp":1793424953164}
+{"level":"debug","message":"[vite] hot updated: /src/components/SpendingLimits.tsx","timestamp":1793424953164}
+{"level":"debug","message":"[vite] hot updated: /src/components/Contacts.tsx","timestamp":1793424953164}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793424953676}
+{"level":"debug","message":"[vite] hot updated: /src/App.tsx","timestamp":1793424953677}
+{"level":"debug","message":"[vite] hot updated: /src/components/AutoSave.tsx","timestamp":1793424953677}
+{"level":"debug","message":"[vite] hot updated: /src/components/ScheduledPayments.tsx","timestamp":1793424953677}
+{"level":"debug","message":"[vite] hot updated: /src/components/PaymentRequest.tsx","timestamp":1793424953677}
+{"level":"debug","message":"[vite] hot updated: /src/components/FxRouter.tsx","timestamp":1793424953677}
+{"level":"debug","message":"[vite] hot updated: /src/components/InternalSend.tsx","timestamp":1793424953677}
+{"level":"debug","message":"[vite] hot updated: /src/components/AuthScreen.tsx","timestamp":1793424953677}
+{"level":"debug","message":"[vite] hot updated: /src/components/TransactionHistory.tsx","timestamp":1793424953677}
+{"level":"debug","message":"[vite] hot updated: /src/components/SpendingLimits.tsx","timestamp":1793424953677}
+{"level":"debug","message":"[vite] hot updated: /src/components/Contacts.tsx","timestamp":1793424953677}
+{"level":"debug","message":"[vite] hot updated: /src/index.css","timestamp":1793424954181}
+{"level":"debug","message":"[vite] hot updated: /src/App.tsx","timestamp":1793424954182}
+{"level":"debug","message":"[vite] hot updated: /src/components/AutoSave.tsx","timestamp":1793424954182}
+{"level":"debug","message":"[vite] hot updated: /src/components/ScheduledPayments.tsx","timestamp":1793424954182}
+{"level":"debug","message":"[vite] hot updated: /src/components/PaymentRequest.tsx","timestamp":1793424954182}
+{"level":"debug","message":"[vite] hot updated: /src/components/FxRouter.tsx","timestamp":1793424954182}
+{"level":"debug","message":"[vite] hot updated: /src/components/InternalSend.tsx","timestamp":1793424954183}
+{"level":"debug","message":"[vite] hot updated: /src/components/AuthScreen.tsx","timestamp":1793424954183}
+{"level":"debug","message":"[vite] hot updated: /src/components/TransactionHistory.tsx","timestamp":1793424954184}
+{"level":"debug","message":"[vite] hot updated: /src/components/SpendingLimits.tsx","timestamp":1793424954184}
+{"level":"debug","message":"[vite] hot updated: /src/components/Contacts.tsx","timestamp":1793424954184}

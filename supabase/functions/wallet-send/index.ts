@@ -24,54 +24,39 @@ Deno.serve(async(req)=>{
     const apiKey=Deno.env.get('CIRCLE_API_KEY')!
     const entitySecret=Deno.env.get('CIRCLE_ENTITY_SECRET')!
 
-    // Get public key
     const pkRes=await fetch('https://api.circle.com/v1/w3s/config/entity/publicKey',{headers:{'Authorization':`Bearer ${apiKey}`}})
     const pkData=await pkRes.json() as{data?:{publicKey:string};message?:string}
     if(!pkData.data?.publicKey) return j({error:'Failed to get public key',detail:pkData},500)
 
     const ciphertext=await encryptEntitySecret(entitySecret,pkData.data.publicKey)
-
     const units=BigInt(Math.round(parseFloat(amount)*1_000_000)).toString()
-
-    const idempotencyKey=crypto.randomUUID()
-    const txBody={
-      idempotencyKey,
-      entitySecretCiphertext:ciphertext,
-      walletId,
-      contractAddress:USDC,
-      abiFunctionSignature:'transfer(address,uint256)',
-      abiParameters:[toAddress,units],
-      feeLevel:'MEDIUM'
-    }
 
     const txRes=await fetch('https://api.circle.com/v1/w3s/developer/transactions/contractExecution',{
       method:'POST',
       headers:{'Authorization':`Bearer ${apiKey}`,'Content-Type':'application/json'},
-      body:JSON.stringify(txBody)
+      body:JSON.stringify({
+        idempotencyKey:crypto.randomUUID(),
+        entitySecretCiphertext:ciphertext,
+        walletId,
+        contractAddress:USDC,
+        abiFunctionSignature:'transfer(address,uint256)',
+        abiParameters:[toAddress,units],
+        feeLevel:'MEDIUM'
+      })
     })
     const txData=await txRes.json() as{data?:{id:string};code?:number;message?:string;errors?:unknown[]}
-
     if(!txData.data?.id) return j({error:txData.message??'No txId',detail:txData},400)
 
+    // Return txId immediately — frontend polls /tx-status for completion
     const txId=txData.data.id
 
-    // Poll for completion (up to 90s)
-    for(let i=0;i<45;i++){
-      await new Promise(r=>setTimeout(r,2000))
-      const pr=await fetch(`https://api.circle.com/v1/w3s/developer/transactions/${txId}`,{headers:{'Authorization':`Bearer ${apiKey}`}})
-      const pd=await pr.json() as{data?:{transaction?:{state:string;txHash?:string}}}
-      const tx=pd.data?.transaction
-      if(!tx)continue
-      if(tx.state==='COMPLETE'){
-        // Record in Supabase
-        const SB_URL=Deno.env.get('SUPABASE_URL')!,SB_KEY=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-        await fetch(`${SB_URL}/rest/v1/tx_history`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({wallet_id:walletId,tx_hash:tx.txHash??txId,direction:'out',amount,counterparty:toAddress,memo:memo??'',timestamp:Date.now()})})
-        return j({txId,txHash:tx.txHash})
-      }
-      if(['FAILED','DENIED','CANCELLED'].includes(tx.state)) return j({error:`Transaction ${tx.state}`},400)
-    }
-    return j({error:'Transaction timeout'},408)
+    // Record as pending in Supabase
+    const SB_URL=Deno.env.get('SUPABASE_URL')!,SB_KEY=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    await fetch(`${SB_URL}/rest/v1/tx_history`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify({wallet_id:walletId,tx_hash:txId,direction:'out',amount,counterparty:toAddress,memo:memo??'',timestamp:Date.now()})})
+
+    return j({txId,pending:true})
   }catch(err){
-    return j({error:err instanceof Error?err.message:'Server error',stack:err instanceof Error?err.stack:undefined},500)
+    return j({error:err instanceof Error?err.message:'Server error'},500)
   }
 })

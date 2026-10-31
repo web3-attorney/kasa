@@ -66,6 +66,7 @@ const ROUTE_MAP: Record<string, string> = {
   '/api/limits':                 'limits',
   '/api/limits/send-confirm':    'limits',
   '/api/limits/verify-confirm':  'limits',
+  '/api/tx-status':              'tx-status',
 }
 
 export function apiUrl(path: string): string {
@@ -111,6 +112,25 @@ export async function getWalletBalance(walletId: string, address: string): Promi
   return data.balance ?? '0'
 }
 
+// ── Poll tx status (production: Edge Function returns txId immediately) ────────
+
+async function pollUntilComplete(txId: string, timeoutMs = 120_000): Promise<string> {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, 3000))
+    try {
+      const r = await fetch(apiUrl(`/api/tx-status?txId=${encodeURIComponent(txId)}`), { headers: authHeaders() })
+      const d = await r.json() as { state?: string; txHash?: string }
+      if (d.state === 'COMPLETE') return d.txHash ?? txId
+      if (d.state && ['FAILED','DENIED','CANCELLED'].includes(d.state)) throw new Error(`Transaction ${d.state}`)
+    } catch (e) {
+      if (e instanceof Error && e.message.startsWith('Transaction')) throw e
+      // network error — keep polling
+    }
+  }
+  throw new Error('Transaction timed out')
+}
+
 // ── Send USDC ─────────────────────────────────────────────────────────────────
 
 export async function sendUsdc(walletId: string, toAddress: string, amountRaw: bigint): Promise<string> {
@@ -119,8 +139,10 @@ export async function sendUsdc(walletId: string, toAddress: string, amountRaw: b
     method: 'POST', headers: authHeaders(),
     body: JSON.stringify({ walletId, toAddress, amount }),
   })
-  const data = await res.json() as { txId?: string; txHash?: string; error?: string; requiresConfirmation?: boolean; confirmId?: string }
+  const data = await res.json() as { txId?: string; txHash?: string; pending?: boolean; error?: string; requiresConfirmation?: boolean; confirmId?: string }
   if (!res.ok) throw Object.assign(new Error(data.error ?? 'Transaction failed'), data)
+  // If pending (production), poll for completion
+  if (data.pending && data.txId) return pollUntilComplete(data.txId)
   return data.txHash ?? data.txId ?? ''
 }
 
@@ -131,7 +153,8 @@ export async function sendContractCall(walletId: string, contractAddress: string
     method: 'POST', headers: authHeaders(),
     body: JSON.stringify({ walletId, contractAddress, abiFunctionSignature, abiParameters }),
   })
-  const data = await res.json() as { txId?: string; txHash?: string; error?: string }
+  const data = await res.json() as { txId?: string; txHash?: string; pending?: boolean; error?: string }
   if (!res.ok) throw new Error(data.error ?? 'Contract call failed')
+  if (data.pending && data.txId) return pollUntilComplete(data.txId)
   return data.txHash ?? data.txId ?? ''
 }
