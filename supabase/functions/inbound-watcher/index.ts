@@ -38,19 +38,21 @@ Deno.serve(async (req) => {
     const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const sbH = { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json', 'Accept': 'application/json' }
 
-    // Fetch recent inbound transactions from Circle (walletId-scoped, USDC transfers in)
+    // Fetch recent transactions from Circle — filter inbound client-side
+    // (Circle's API does not support ?operation=INBOUND as a query param)
     const txRes = await fetch(
-      `https://api.circle.com/v1/w3s/transactions?walletIds=${walletId}&operation=INBOUND&pageSize=50`,
+      `https://api.circle.com/v1/w3s/transactions?walletIds=${walletId}&pageSize=50`,
       { headers: { 'Authorization': `Bearer ${apiKey}` } }
     )
     const txData = await txRes.json() as { data?: { transactions?: CircleTx[] } }
     const transactions = txData.data?.transactions ?? []
 
-    // Filter to COMPLETE transfers only
+    // Keep only COMPLETE INBOUND transfers with a tx hash and an amount
     const completed = transactions.filter(tx =>
+      tx.transactionType === 'INBOUND' &&
       tx.state === 'COMPLETE' &&
       tx.txHash &&
-      tx.transactionType === 'INBOUND'
+      (tx.amounts?.length ?? 0) > 0
     )
 
     if (completed.length === 0) return j({ found: 0, new: 0 })

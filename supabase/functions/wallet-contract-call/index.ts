@@ -23,7 +23,8 @@ function txMeta(sig:string, params:string[], contractAddress:string, savingsAddr
     return { direction: 'save', label: 'Auto-Save Deposit', counterparty: savingsAddr || contractAddress, amount: raw }
   }
   if (fn === 'withdraw') {
-    return { direction: 'save', label: 'Savings Withdrawal', counterparty: savingsAddr || contractAddress, amount: '?' }
+    // amount will be filled in after onchain read below
+    return { direction: 'save', label: 'Savings Withdrawal', counterparty: savingsAddr || contractAddress, amount: '__FETCH__' }
   }
   // approve, commit, register, etc — no record needed
   return null
@@ -68,10 +69,35 @@ Deno.serve(async(req)=>{
     // Write tx_history record for save/withdraw actions
     const meta = txMeta(abiFunctionSignature, abiParameters ?? [], contractAddress, SAVINGS)
     if (meta) {
+      // For withdraw, read the savings balance onchain before it's zeroed
+      let amount = meta.amount
+      if (amount === '__FETCH__') {
+        try {
+          const RPC = 'https://rpc.testnet.arc.io'
+          // KasaSavings.balances(address) — selector keccak256("balances(address)")[0:4]
+          // selector = 0x27e235e3
+          const walletRes = await fetch(`https://api.circle.com/v1/w3s/wallets/${walletId}`, {
+            headers: { 'Authorization': `Bearer ${apiKey}` }
+          })
+          const walletData = await walletRes.json() as { data?: { wallet?: { address?: string } } }
+          const addr = walletData.data?.wallet?.address ?? ''
+          if (addr) {
+            const paddedAddr = addr.toLowerCase().replace('0x','').padStart(64,'0')
+            const rpcRes = await fetch(RPC, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ jsonrpc:'2.0', id:1, method:'eth_call', params:[{ to: contractAddress, data: '0x27e235e3' + paddedAddr }, 'latest'] })
+            })
+            const rpcData = await rpcRes.json() as { result?: string }
+            if (rpcData.result && rpcData.result !== '0x') {
+              amount = (BigInt(rpcData.result) / BigInt(1e6)).toString() + '.00'
+            }
+          }
+        } catch { amount = '?' }
+      }
       await fetch(`${SB_URL}/rest/v1/tx_history`, {
         method: 'POST',
         headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
-        body: JSON.stringify({ wallet_id: walletId, tx_hash: txId, direction: meta.direction, amount: meta.amount, counterparty: meta.counterparty, memo: '', label: meta.label, timestamp: Date.now() })
+        body: JSON.stringify({ wallet_id: walletId, tx_hash: txId, direction: meta.direction, amount, counterparty: meta.counterparty, memo: '', label: meta.label, timestamp: Date.now() })
       })
     }
 
