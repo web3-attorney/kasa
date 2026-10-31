@@ -6,7 +6,7 @@ const CORS = {
 const j = (d: unknown, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { ...CORS, 'Content-Type': 'application/json' } })
 const e = (m: string, s = 400) => j({ error: m }, s)
 
-const REGISTRY = '0x6a86b61cb3205b8d017186b8ecc9629641c6dd21'
+const REGISTRY = (Deno.env.get('VITE_REGISTRY_ADDRESS') ?? '0xA0359617449E696F5bb1686fA764575bDB93da40') as `0x${string}`
 const RPC = Deno.env.get('ARC_RPC') ?? 'https://rpc.mainnet.arc.io'
 
 // ── Keccak-256 pure TypeScript ────────────────────────────────────────────────
